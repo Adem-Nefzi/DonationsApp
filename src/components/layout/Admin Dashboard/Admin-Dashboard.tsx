@@ -11,18 +11,19 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Bell,
-  Heart,
-  MessageSquare,
   Moon,
   Sun,
-  TrendingUp,
   Users,
+  Building,
+  Settings,
+  Activity,
   LogOut,
   User,
   Edit,
+  UserRoundCogIcon,
   Save,
 } from "lucide-react";
 import {
@@ -42,20 +43,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "../../../hooks/use-toast";
-import AssociationsList from "./AssociationList";
-import DonationHistory from "./DonationHistory";
-import ChatSection from "./ChatSection";
+import UserManagement from "./user-management";
+import AssociationManagement from "./Association-management";
+import SystemSettings from "./System-settings";
+import AdminStats from "./Admin-stats";
 import NotificationsPanel from "./NotificationsPanel";
 
-export default function DonorDashboard() {
-  const [activeTab, setActiveTab] = useState("discover");
+export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("overview");
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [profileData, setProfileData] = useState({
-    firstName: "Jane",
-    lastName: "Doe",
+    firstName: "Admin",
+    lastName: "User",
     password: "",
     confirmPassword: "",
   });
@@ -83,7 +85,7 @@ export default function DonorDashboard() {
     // Add your logout logic here
     toast({
       title: "Logged out successfully",
-      description: "You have been logged out of your donor account",
+      description: "You have been logged out of the admin dashboard",
     });
     setShowLogoutDialog(false);
   };
@@ -118,11 +120,11 @@ export default function DonorDashboard() {
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-400">
-              Donor Dashboard
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-purple-600">
+              Admin Dashboard
             </h1>
             <p className="text-muted-foreground text-sm md:text-base">
-              Support causes that matter to you
+              Manage users, associations, and system settings
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -147,20 +149,15 @@ export default function DonorDashboard() {
             >
               <Bell className="h-5 w-5" />
               <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 animate-pulse">
-                3
+                7
               </Badge>
             </Button>
 
-            {/* Avatar Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="border-2 border-primary hover:scale-105 transition-transform cursor-pointer">
-                  <AvatarImage
-                    src="/placeholder.svg?height=40&width=40"
-                    alt="User"
-                  />
                   <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
-                    <User className="h-5 w-5" />
+                    <UserRoundCogIcon className="h-6 w-6\" />
                   </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
@@ -194,7 +191,7 @@ export default function DonorDashboard() {
         {/* Logout Confirmation Dialog */}
         <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
           <DialogContent
-            className={`sm:max-w-[425px] rounded-lg ${
+            className={`sm:max-w-[425px] ${
               theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
             }`}
           >
@@ -204,7 +201,7 @@ export default function DonorDashboard() {
                 Confirm Logout
               </DialogTitle>
               <DialogDescription>
-                Are you sure you want to log out of your donor account?
+                Are you sure you want to log out of the admin dashboard?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
@@ -228,7 +225,7 @@ export default function DonorDashboard() {
               theme === "dark" ? "bg-slate-900" : "bg-white"
             }`}
           >
-            {/* Decorative background elements */}
+            {/* Decorative background elements (smaller) */}
             <div
               className={`absolute -top-16 -right-16 w-48 h-48 rounded-full blur-2xl opacity-20 ${
                 theme === "dark" ? "bg-purple-600" : "bg-indigo-200"
@@ -240,7 +237,7 @@ export default function DonorDashboard() {
               }`}
             />
 
-            {/* Header with gradient */}
+            {/* Compact header with gradient */}
             <div
               className={`relative overflow-hidden px-6 py-4 ${
                 theme === "dark"
@@ -445,8 +442,6 @@ export default function DonorDashboard() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Rest of your existing dashboard code remains exactly the same */}
         {/* Notifications Panel */}
         {showNotifications && (
           <Card
@@ -458,7 +453,9 @@ export default function DonorDashboard() {
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle>Notifications</CardTitle>
-                  <CardDescription>Your recent activity</CardDescription>
+                  <CardDescription>
+                    System alerts and activities
+                  </CardDescription>
                 </div>
                 <Button
                   variant="ghost"
@@ -485,11 +482,11 @@ export default function DonorDashboard() {
         >
           <div className="relative z-10">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
-              Welcome back, Jane!
+              System Overview
             </h1>
             <p className="opacity-90 max-w-xl">
-              Your generosity has helped 5 associations so far. Discover new
-              causes that need your support today.
+              Manage all platform activities, users, and associations from this
+              centralized dashboard.
             </p>
           </div>
         </div>
@@ -501,34 +498,40 @@ export default function DonorDashboard() {
           className="space-y-6"
         >
           <TabsList
-            className={`grid grid-cols-3 w-full max-w-md mx-auto md:mx-0 shadow-sm ${
+            className={`grid grid-cols-4 w-full max-w-xl mx-auto md:mx-0 shadow-sm ${
               theme === "dark"
                 ? "bg-slate-800 border-slate-700"
                 : "bg-white border"
             }`}
           >
             <TabsTrigger
-              value="discover"
+              value="overview"
               className="transition-all data-[state=active]:shadow-sm"
             >
-              Discover
+              Overview
             </TabsTrigger>
             <TabsTrigger
-              value="donations"
+              value="users"
               className="transition-all data-[state=active]:shadow-sm"
             >
-              My Donations
+              Users
             </TabsTrigger>
             <TabsTrigger
-              value="messages"
+              value="associations"
               className="transition-all data-[state=active]:shadow-sm"
             >
-              Messages
+              Associations
+            </TabsTrigger>
+            <TabsTrigger
+              value="settings"
+              className="transition-all data-[state=active]:shadow-sm"
+            >
+              Settings
             </TabsTrigger>
           </TabsList>
 
-          {/* Discover Tab */}
-          <TabsContent value="discover" className="space-y-6">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
             {/* Stats Cards */}
             <div className="grid gap-6 md:grid-cols-3">
               <Card
@@ -547,7 +550,7 @@ export default function DonorDashboard() {
                 ></div>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Total Donations
+                    Total Users
                   </CardTitle>
                   <div
                     className={`rounded-full p-2 transition-all duration-300 ${
@@ -556,15 +559,14 @@ export default function DonorDashboard() {
                         : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200"
                     }`}
                   >
-                    <Heart className="h-4 w-4" />
+                    <Users className="h-4 w-4" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">8</div>
-                  <div className="flex items-center mt-1">
-                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <p className="text-xs text-green-500">+2 from last month</p>
-                  </div>
+                  <div className="text-2xl font-bold">1,248</div>
+                  <p className="text-xs text-muted-foreground">
+                    +86 from last month
+                  </p>
                 </CardContent>
               </Card>
 
@@ -584,7 +586,7 @@ export default function DonorDashboard() {
                 ></div>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Associations Helped
+                    Active Associations
                   </CardTitle>
                   <div
                     className={`rounded-full p-2 transition-all duration-300 ${
@@ -593,13 +595,13 @@ export default function DonorDashboard() {
                         : "bg-purple-100 text-purple-600 group-hover:bg-purple-200"
                     }`}
                   >
-                    <Users className="h-4 w-4" />
+                    <Building className="h-4 w-4" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">5</div>
+                  <div className="text-2xl font-bold">42</div>
                   <p className="text-xs text-muted-foreground">
-                    Across 3 categories
+                    +8 from last month
                   </p>
                 </CardContent>
               </Card>
@@ -620,7 +622,7 @@ export default function DonorDashboard() {
                 ></div>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Unread Messages
+                    System Health
                   </CardTitle>
                   <div
                     className={`rounded-full p-2 transition-all duration-300 ${
@@ -629,19 +631,39 @@ export default function DonorDashboard() {
                         : "bg-blue-100 text-blue-600 group-hover:bg-blue-200"
                     }`}
                   >
-                    <MessageSquare className="h-4 w-4" />
+                    <Activity className="h-4 w-4" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">3</div>
+                  <div className="text-2xl font-bold">98%</div>
                   <p className="text-xs text-muted-foreground">
-                    2 new conversations
+                    All systems operational
                   </p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Discover Associations */}
+            {/* System Statistics */}
+            <Card
+              className={`group hover:shadow-lg transition-all duration-300 ${
+                theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
+              } rounded-xl`}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-indigo-500" />
+                  System Statistics
+                </CardTitle>
+                <CardDescription>Overview of platform activity</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AdminStats />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-6">
             <Card
               className={`group hover:shadow-lg transition-all duration-300 ${
                 theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
@@ -650,20 +672,20 @@ export default function DonorDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-purple-500" />
-                  Discover Associations
+                  User Management
                 </CardTitle>
                 <CardDescription>
-                  Find causes that align with your values
+                  Manage all users in the system
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AssociationsList />
+                <UserManagement />
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Donations Tab */}
-          <TabsContent value="donations" className="space-y-6">
+          {/* Associations Tab */}
+          <TabsContent value="associations" className="space-y-6">
             <Card
               className={`group hover:shadow-lg transition-all duration-300 ${
                 theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
@@ -671,19 +693,21 @@ export default function DonorDashboard() {
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-indigo-500" />
-                  Your Donation History
+                  <Building className="h-5 w-5 text-blue-500" />
+                  Association Management
                 </CardTitle>
-                <CardDescription>Track your contributions</CardDescription>
+                <CardDescription>
+                  Manage all associations in the system
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <DonationHistory />
+                <AssociationManagement />
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Messages Tab */}
-          <TabsContent value="messages" className="space-y-6">
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
             <Card
               className={`group hover:shadow-lg transition-all duration-300 ${
                 theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
@@ -691,13 +715,15 @@ export default function DonorDashboard() {
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-blue-500" />
-                  Messages
+                  <Settings className="h-5 w-5 text-indigo-500" />
+                  System Settings
                 </CardTitle>
-                <CardDescription>Chat with associations</CardDescription>
+                <CardDescription>
+                  Configure system-wide settings
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <ChatSection />
+                <SystemSettings />
               </CardContent>
             </Card>
           </TabsContent>

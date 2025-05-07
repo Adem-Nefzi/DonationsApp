@@ -4,10 +4,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { login, associationLogin, logout } from "@/api/auth"; // You'll need to add associationLogin to your auth service
+import { login, associationLogin, logout } from "@/api/auth";
 import LoginPageUI from "@/components/layout/Login/LoginPage";
 
-// Form schema remains the same
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   password: z.string().min(1, "Password is required"),
@@ -17,7 +16,9 @@ const formSchema = z.object({
 export type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
-  const [userType, setUserType] = useState<"donor" | "recipient">("donor");
+  const [userType, setUserType] = useState<"donor" | "recipient" | "admin">(
+    "donor"
+  );
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formStatus, setFormStatus] = useState<{
@@ -39,20 +40,19 @@ export default function LoginPage() {
     setFormStatus({ type: null, message: "" });
 
     try {
-      let response;
       let redirectPath = "/dashboard";
 
       if (userType === "donor") {
-        // First try regular user login
+        // First try donor login
         try {
-          response = await login({
+          const response = await login({
             email: values.email,
             password: values.password,
           });
 
           // Verify the user is actually a donor
           if (response.user?.user_type !== "donor") {
-            await logout(); // Clear any partial auth
+            await logout();
             throw new Error(
               "Please use recipient login for recipient accounts"
             );
@@ -60,7 +60,7 @@ export default function LoginPage() {
 
           redirectPath = "/donor-dashboard";
         } catch (userError) {
-          // If user login fails, try association login
+          // If donor login fails, try as association
           try {
             await associationLogin({
               email: values.email,
@@ -68,12 +68,12 @@ export default function LoginPage() {
             });
             redirectPath = "/association-dashboard";
           } catch {
-            throw userError; // Throw original user error
+            throw userError; // Throw original error
           }
         }
-      } else {
-        // Recipient login
-        response = await login({
+      } else if (userType === "recipient") {
+        // Recipient login flow
+        const response = await login({
           email: values.email,
           password: values.password,
         });
@@ -85,6 +85,20 @@ export default function LoginPage() {
         }
 
         redirectPath = "/recipient-dashboard";
+      } else if (userType === "admin") {
+        // Admin login flow
+        const response = await login({
+          email: values.email,
+          password: values.password,
+        });
+
+        // Verify the user is actually an admin
+        if (response.user?.user_type !== "admin") {
+          await logout();
+          throw new Error("Please use admin credentials for admin access");
+        }
+
+        redirectPath = "/admin-dashboard";
       }
 
       setFormStatus({

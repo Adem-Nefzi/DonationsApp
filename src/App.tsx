@@ -2,9 +2,10 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import SignupPage from "./components/Signup";
 import HomePage from "./components/HomePage"; // Assuming you have this
 import LoginPage from "./components/Login";
-import DonorDashboard from "./components/DonorDashboard";
-import AssociationDashboard from "./components/AssociationDashboard";
-
+import RecipientPage from "./components/RecipientDashboard";
+import AssociationPage from "./components/AssociationDashboard";
+import DashboardPage from "./components/DonorDashboard";
+import AdminDashboard from "./components/layout/Admin Dashboard/Admin-Dashboard";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -20,11 +21,19 @@ const router = createBrowserRouter([
   },
   {
     path: "/donor-dashboard",
-    element: <DonorDashboard />,
+    element: <DashboardPage />,
   },
   {
     path: "/association-dashboard",
-    element: <AssociationDashboard />,
+    element: <AssociationPage />,
+  },
+  {
+    path: "/recipient-dashboard",
+    element: <RecipientPage />,
+  },
+  {
+    path: "/admin-dashboard",
+    element: <AdminDashboard />,
   },
 ]);
 

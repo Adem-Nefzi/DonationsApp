@@ -1,14 +1,20 @@
-import { Heart, Users, LogIn } from "lucide-react";
+import { Heart, Users, LogIn, Shield } from "lucide-react";
 
 interface InfoSectionProps {
-  userType: "donor" | "recipient";
+  userType: "donor" | "recipient" | "admin";
 }
 
 export default function InfoSection({ userType }: InfoSectionProps) {
   return (
     <div className="relative z-10 text-center md:text-left space-y-6 order-2 md:order-1">
       <div className="inline-flex p-3 rounded-full bg-primary/10 text-primary">
-        {userType === "donor" ? <Heart size={24} /> : <Users size={24} />}
+        {userType === "donor" ? (
+          <Heart size={24} />
+        ) : userType === "recipient" ? (
+          <Users size={24} />
+        ) : (
+          <Shield size={24} />
+        )}
       </div>
 
       <div className="space-y-2">
@@ -18,7 +24,9 @@ export default function InfoSection({ userType }: InfoSectionProps) {
         <p className="text-muted-foreground max-w-md">
           {userType === "donor"
             ? "Sign in to continue your journey of making a difference through your generous donations."
-            : "Sign in to manage your campaigns and connect with donors who believe in your mission."}
+            : userType === "recipient"
+            ? "Sign in to manage your campaigns and connect with donors who believe in your mission."
+            : "Sign in to manage the platform and oversee all donation activities."}
         </p>
       </div>
 
@@ -29,7 +37,9 @@ export default function InfoSection({ userType }: InfoSectionProps) {
             <span className="text-sm">
               {userType === "donor"
                 ? "Support causes you care about"
-                : "Receive support for your mission"}
+                : userType === "recipient"
+                ? "Receive support for your mission"
+                : "Manage all platform users"}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -37,7 +47,9 @@ export default function InfoSection({ userType }: InfoSectionProps) {
             <span className="text-sm">
               {userType === "donor"
                 ? "Track your donation impact"
-                : "Connect with generous donors"}
+                : userType === "recipient"
+                ? "Connect with generous donors"
+                : "Monitor donation activities"}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -45,7 +57,9 @@ export default function InfoSection({ userType }: InfoSectionProps) {
             <span className="text-sm">
               {userType === "donor"
                 ? "Get tax-deductible receipts"
-                : "Manage and report on donations"}
+                : userType === "recipient"
+                ? "Manage and report on donations"
+                : "Generate platform analytics"}
             </span>
           </div>
         </div>

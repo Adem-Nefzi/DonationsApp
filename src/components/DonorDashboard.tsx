@@ -4,13 +4,11 @@ import DashboardSkeleton from "@/components/layout/Donor Dashboard/DashboardSkel
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen flex justify-center bg-slate-50 dark:bg-slate-900">
-      <div className="w-full max-w-4xl mx-auto p-4 md:p-6 lg:p-8">
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm">
-          <Suspense fallback={<DashboardSkeleton />}>
-            <DonorDashboard />
-          </Suspense>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800">
+      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        <Suspense fallback={<DashboardSkeleton />}>
+          <DonorDashboard />
+        </Suspense>
       </div>
     </div>
   );

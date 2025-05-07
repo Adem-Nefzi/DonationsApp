@@ -16,11 +16,12 @@ import {
   Bell,
   MessageSquare,
   Moon,
-  Package,
   Sun,
+  HandHelping,
+  Clock,
   Users,
   LogOut,
-  Building,
+  UserRoundSearchIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -37,14 +38,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "../../../hooks/use-toast";
-import DonationsList from "./DonationsList";
-import ApplicantsList from "./ApplicantsList";
-import ChatSection from "./ChatSection";
-import NotificationsPanel from "../Donor Dashboard/NotificationsPanel";
-import NeedsList from "./NeedsList";
-import AssociationProfile from "./AssociationProfile";
+import AssociationsList from "./Associations-list";
+import RequestHistory from "./Request-history";
+import ChatSection from "./Chat-Section";
+import NotificationsPanel from "./Notifications-Panel";
+import RecipientProfile from "./Recipient-Profile";
 
-export default function AssociationDashboard() {
+export default function RecipientDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
@@ -73,7 +73,7 @@ export default function AssociationDashboard() {
     // Add your logout logic here
     toast({
       title: "Logged out successfully",
-      description: "You have been logged out of your association account",
+      description: "You have been logged out of your recipient account",
     });
     setShowLogoutDialog(false);
   };
@@ -90,11 +90,11 @@ export default function AssociationDashboard() {
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-              Association Dashboard
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-blue-600">
+              Recipient Dashboard
             </h1>
             <p className="text-muted-foreground text-sm md:text-base">
-              Manage donations and help those in need
+              Find help and connect with associations
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -119,7 +119,7 @@ export default function AssociationDashboard() {
             >
               <Bell className="h-5 w-5" />
               <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 animate-pulse">
-                5
+                4
               </Badge>
             </Button>
 
@@ -129,10 +129,10 @@ export default function AssociationDashboard() {
                 <Avatar className="border-2 border-primary hover:scale-105 transition-transform cursor-pointer">
                   <AvatarImage
                     src="/placeholder.svg?height=40&width=40"
-                    alt="Association"
+                    alt="Recipient"
                   />
                   <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
-                    <Building className="h-4 w-4" />
+                    <UserRoundSearchIcon className="h-4 w-4" />
                   </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
@@ -169,7 +169,7 @@ export default function AssociationDashboard() {
                 Confirm Logout
               </DialogTitle>
               <DialogDescription>
-                Are you sure you want to log out of your association account?
+                Are you sure you want to log out of your recipient account?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
@@ -235,16 +235,16 @@ export default function AssociationDashboard() {
               Overview
             </TabsTrigger>
             <TabsTrigger
-              value="donations"
+              value="associations"
               className="transition-all data-[state=active]:shadow-sm"
             >
-              Donations
+              Associations
             </TabsTrigger>
             <TabsTrigger
-              value="applicants"
+              value="requests"
               className="transition-all data-[state=active]:shadow-sm"
             >
-              Applicants
+              My Requests
             </TabsTrigger>
             <TabsTrigger
               value="messages"
@@ -274,7 +274,7 @@ export default function AssociationDashboard() {
                 ></div>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Total Donations
+                    Active Requests
                   </CardTitle>
                   <div
                     className={`rounded-full p-2 transition-all duration-300 ${
@@ -283,13 +283,13 @@ export default function AssociationDashboard() {
                         : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200"
                     }`}
                   >
-                    <Package className="h-4 w-4" />
+                    <HandHelping className="h-4 w-4" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">24</div>
+                  <div className="text-2xl font-bold">3</div>
                   <p className="text-xs text-muted-foreground">
-                    +8 from last month
+                    2 pending approval
                   </p>
                 </CardContent>
               </Card>
@@ -310,7 +310,7 @@ export default function AssociationDashboard() {
                 ></div>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Active Applicants
+                    Approved Requests
                   </CardTitle>
                   <div
                     className={`rounded-full p-2 transition-all duration-300 ${
@@ -319,13 +319,13 @@ export default function AssociationDashboard() {
                         : "bg-purple-100 text-purple-600 group-hover:bg-purple-200"
                     }`}
                   >
-                    <Users className="h-4 w-4" />
+                    <Clock className="h-4 w-4" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">18</div>
+                  <div className="text-2xl font-bold">5</div>
                   <p className="text-xs text-muted-foreground">
-                    +5 new this week
+                    2 ready for pickup
                   </p>
                 </CardContent>
               </Card>
@@ -359,15 +359,15 @@ export default function AssociationDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">7</div>
+                  <div className="text-2xl font-bold">4</div>
                   <p className="text-xs text-muted-foreground">
-                    3 new conversations
+                    From 2 associations
                   </p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Recent Donations (Full Width) */}
+            {/* Recent Requests */}
             <Card
               className={`group hover:shadow-lg transition-all duration-300 ${
                 theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
@@ -375,17 +375,17 @@ export default function AssociationDashboard() {
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-indigo-500" />
-                  Recent Donations
+                  <HandHelping className="h-5 w-5 text-indigo-500" />
+                  Recent Requests
                 </CardTitle>
-                <CardDescription>Latest donations received</CardDescription>
+                <CardDescription>Your recent help requests</CardDescription>
               </CardHeader>
               <CardContent>
-                <DonationsList limit={5} />
+                <RequestHistory limit={5} />
               </CardContent>
             </Card>
 
-            {/* Recent Applicants */}
+            {/* Recommended Associations */}
             <Card
               className={`group hover:shadow-lg transition-all duration-300 ${
                 theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
@@ -394,54 +394,14 @@ export default function AssociationDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-purple-500" />
-                  Recent Applicants
-                </CardTitle>
-                <CardDescription>People who need your help</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ApplicantsList limit={3} />
-              </CardContent>
-            </Card>
-
-            {/* Needs List */}
-            <Card
-              className={`group hover:shadow-lg transition-all duration-300 ${
-                theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
-              } rounded-xl`}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span
-                    className={`p-1 rounded-md ${
-                      theme === "dark"
-                        ? "bg-red-500/20 text-red-400"
-                        : "bg-red-100 text-red-600"
-                    }`}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                      <line x1="12" y1="9" x2="12" y2="13"></line>
-                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                  </span>
-                  Current Needs
+                  Recommended Associations
                 </CardTitle>
                 <CardDescription>
-                  Items your association currently needs
+                  Associations that can help you
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <NeedsList />
+                <AssociationsList limit={3} />
               </CardContent>
             </Card>
 
@@ -456,26 +416,26 @@ export default function AssociationDashboard() {
                   <Avatar className="h-6 w-6">
                     <AvatarImage
                       src="/placeholder.svg?height=40&width=40"
-                      alt="Association"
+                      alt="Recipient"
                     />
                     <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-xs">
-                      <Building className="h-4 w-4" />
+                      <UserRoundSearchIcon className="h-3 w-3" />
                     </AvatarFallback>
                   </Avatar>
-                  Association Profile
+                  Your Profile
                 </CardTitle>
                 <CardDescription>
-                  Manage your association information
+                  Manage your personal information
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AssociationProfile />
+                <RecipientProfile />
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Donations Tab */}
-          <TabsContent value="donations" className="space-y-6">
+          {/* Associations Tab */}
+          <TabsContent value="associations" className="space-y-6">
             <Card
               className={`group hover:shadow-lg transition-all duration-300 ${
                 theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
@@ -483,21 +443,21 @@ export default function AssociationDashboard() {
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-indigo-500" />
-                  Donations
+                  <Users className="h-5 w-5 text-indigo-500" />
+                  Associations
                 </CardTitle>
                 <CardDescription>
-                  All donations received by your association
+                  Discover associations that can help you
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <DonationsList />
+                <AssociationsList />
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Applicants Tab */}
-          <TabsContent value="applicants" className="space-y-6">
+          {/* Requests Tab */}
+          <TabsContent value="requests" className="space-y-6">
             <Card
               className={`group hover:shadow-lg transition-all duration-300 ${
                 theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
@@ -505,13 +465,13 @@ export default function AssociationDashboard() {
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-purple-500" />
-                  Applicants
+                  <HandHelping className="h-5 w-5 text-purple-500" />
+                  My Requests
                 </CardTitle>
-                <CardDescription>People who need your help</CardDescription>
+                <CardDescription>Track your help requests</CardDescription>
               </CardHeader>
               <CardContent>
-                <ApplicantsList />
+                <RequestHistory />
               </CardContent>
             </Card>
           </TabsContent>
@@ -528,9 +488,7 @@ export default function AssociationDashboard() {
                   <MessageSquare className="h-5 w-5 text-blue-500" />
                   Messages
                 </CardTitle>
-                <CardDescription>
-                  Chat with applicants and donors
-                </CardDescription>
+                <CardDescription>Chat with associations</CardDescription>
               </CardHeader>
               <CardContent>
                 <ChatSection />

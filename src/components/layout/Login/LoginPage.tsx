@@ -8,8 +8,8 @@ import LoginForm from "./LoginForm";
 
 interface LoginPageUIProps {
   form: UseFormReturn<FormValues>;
-  userType: "donor" | "recipient";
-  setUserType: (type: "donor" | "recipient") => void;
+  userType: "donor" | "recipient" | "admin";
+  setUserType: (type: "donor" | "recipient" | "admin") => void;
   loading: boolean;
   showPassword: boolean;
   setShowPassword: (show: boolean) => void;
@@ -80,6 +80,17 @@ export default function LoginPageUI({
                   }`}
                 >
                   Recipient
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserType("admin")}
+                  className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
+                    userType === "admin"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card hover:bg-muted"
+                  }`}
+                >
+                  Admin
                 </button>
               </div>
             </div>
