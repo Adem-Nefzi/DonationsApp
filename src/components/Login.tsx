@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,7 +41,7 @@ export default function LoginPage() {
       let redirectPath = "/dashboard";
 
       if (userType === "donor") {
-        // First try donor login
+        // Donor login flow
         try {
           const response = await login({
             email: values.email,

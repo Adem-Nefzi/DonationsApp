@@ -48,7 +48,7 @@ import AssociationManagement from "./Association-management";
 import SystemSettings from "./System-settings";
 import AdminStats from "./Admin-stats";
 import NotificationsPanel from "./NotificationsPanel";
-
+import { logout } from "@/api/auth";
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [showNotifications, setShowNotifications] = useState(false);
@@ -80,14 +80,30 @@ export default function AdminDashboard() {
     localStorage.setItem("theme", newTheme);
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
+  const handleLogout = async () => {
+    try {
+      await logout(); // API call to log out on the server
+      localStorage.removeItem("sanctum_token"); // Clear token from storage
 
-  const handleLogout = () => {
-    // Add your logout logic here
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of the admin dashboard",
-    });
-    setShowLogoutDialog(false);
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+        className:
+          "bg-green-600 text-green-800 border-green-600 text-neutral-950",
+      });
+
+      // Delay the redirect slightly to allow toast to show
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast({
+        title: "Logout Failed",
+        description: "An error occurred while logging out.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleProfileUpdate = () => {

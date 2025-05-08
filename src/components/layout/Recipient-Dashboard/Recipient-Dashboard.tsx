@@ -43,6 +43,7 @@ import RequestHistory from "./Request-history";
 import ChatSection from "./Chat-Section";
 import NotificationsPanel from "./Notifications-Panel";
 import RecipientProfile from "./Recipient-Profile";
+import { logout } from "@/api/auth";
 
 export default function RecipientDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -69,13 +70,30 @@ export default function RecipientDashboard() {
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
-  const handleLogout = () => {
-    // Add your logout logic here
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your recipient account",
-    });
-    setShowLogoutDialog(false);
+  const handleLogout = async () => {
+    try {
+      await logout(); // API call to log out on the server
+      localStorage.removeItem("sanctum_token"); // Clear token from storage
+
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+        className:
+          "bg-green-600 text-green-800 border-green-600 text-neutral-950",
+      });
+
+      // Delay the redirect slightly to allow toast to show
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast({
+        title: "Logout Failed",
+        description: "An error occurred while logging out.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

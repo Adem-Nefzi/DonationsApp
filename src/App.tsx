@@ -1,11 +1,13 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import SignupPage from "./components/Signup";
-import HomePage from "./components/HomePage"; // Assuming you have this
+import HomePage from "./components/HomePage";
 import LoginPage from "./components/Login";
 import RecipientPage from "./components/RecipientDashboard";
 import AssociationPage from "./components/AssociationDashboard";
 import DashboardPage from "./components/DonorDashboard";
 import AdminDashboard from "./components/layout/Admin Dashboard/Admin-Dashboard";
+import { Toaster } from "@/components/ui/toaster";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -38,5 +40,10 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster /> {/* ✅ Toast notifications will now work globally */}
+    </>
+  );
 }

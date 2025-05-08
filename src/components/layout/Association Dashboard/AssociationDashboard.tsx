@@ -43,6 +43,7 @@ import ChatSection from "./ChatSection";
 import NotificationsPanel from "../Donor Dashboard/NotificationsPanel";
 import NeedsList from "./NeedsList";
 import AssociationProfile from "./AssociationProfile";
+import { logout } from "@/api/auth";
 
 export default function AssociationDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -69,15 +70,31 @@ export default function AssociationDashboard() {
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
-  const handleLogout = () => {
-    // Add your logout logic here
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your association account",
-    });
-    setShowLogoutDialog(false);
-  };
+  const handleLogout = async () => {
+    try {
+      await logout(); // API call to log out on the server
+      localStorage.removeItem("sanctum_token"); // Clear token from storage
 
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+        className:
+          "bg-green-600 text-green-800 border-green-600 text-neutral-950",
+      });
+
+      // Delay the redirect slightly to allow toast to show
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast({
+        title: "Logout Failed",
+        description: "An error occurred while logging out.",
+        variant: "destructive",
+      });
+    }
+  };
   return (
     <div
       className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${
