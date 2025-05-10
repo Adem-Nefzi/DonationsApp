@@ -8,10 +8,10 @@ interface LoginData {
 
 export const login = async (data: LoginData) => {
   const response = await api.post("/login", data);
-  localStorage.setItem("sanctum_token", response.data.token); // Adjust based on your Laravel response
+  localStorage.setItem("sanctum_token", response.data.token);
+  localStorage.setItem("user", JSON.stringify(response.data.user)); // assuming response contains user object
   return response.data;
 };
-
 export const register = async (data: {
   first_name: string;
   last_name: string;
@@ -26,9 +26,11 @@ export const logout = async () => {
   await api.post("/logout");
   localStorage.removeItem("sanctum_token");
 };
+
 export const associationLogin = async (data: LoginData) => {
   const response = await api.post("/association/login", data);
   localStorage.setItem("sanctum_token", response.data.token);
   localStorage.setItem("user_type", "association");
+  localStorage.setItem("user", JSON.stringify(response.data.user)); // save user data
   return response.data;
 };

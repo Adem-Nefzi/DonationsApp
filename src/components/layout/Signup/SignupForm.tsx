@@ -12,6 +12,8 @@ import {
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 interface SignUpFormProps {
   form: UseFormReturn<FormValues>;
   userType: "donor" | "recipient";
@@ -121,34 +123,26 @@ export default function SignUpForm({
 
           {/* Donor Type (only for donors) */}
           {userType === "donor" && (
-            <div className="space-y-2">
-              <label className="text-base font-medium block">Donor Type</label>
-              <div className="flex gap-4 p-3 bg-background/50 rounded-md border border-input">
+            <div className="space-y-3">
+              <Label className="text-base">Donor Type</Label>
+              <RadioGroup
+                defaultValue={donorType}
+                onValueChange={(value) => setDonorType(value as "individual" | "organization")}
+                className="flex gap-4 p-3 rounded-md border"
+              >
                 <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="individual"
-                    name="donorType"
-                    value="individual"
-                    checked={donorType === "individual"}
-                    onChange={() => setDonorType("individual")}
-                    className="h-4 w-4 rounded-full border border-primary text-primary focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <label htmlFor="individual">Individual</label>
+                  <RadioGroupItem value="individual" id="individual" />
+                  <Label htmlFor="individual" className="font-normal">
+                    Solo Donor
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="organization"
-                    name="donorType"
-                    value="organization"
-                    checked={donorType === "organization"}
-                    onChange={() => setDonorType("organization")}
-                    className="h-4 w-4 rounded-full border border-primary text-primary focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <label htmlFor="organization">Organization</label>
+                  <RadioGroupItem value="organization" id="organization" />
+                  <Label htmlFor="organization" className="font-normal">
+                    Association
+                  </Label>
                 </div>
-              </div>
+              </RadioGroup>
             </div>
           )}
 

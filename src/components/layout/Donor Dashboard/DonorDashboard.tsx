@@ -24,11 +24,15 @@ import {
   User,
   Edit,
   Save,
+  Eye,
+  Loader2,
+  Trash2,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -40,26 +44,68 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "../../../hooks/use-toast";
 import AssociationsList from "./AssociationList";
 import DonationHistory from "./DonationHistory";
 import ChatSection from "./ChatSection";
 import NotificationsPanel from "./NotificationsPanel";
 import { logout } from "@/api/auth";
-
+import { deleteUserAccount, updateUserProfile } from "@/api/crud";
+import { getUserProfile } from "@/api/crud";
 export default function DonorDashboard() {
   const [activeTab, setActiveTab] = useState("discover");
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [DeleteDialog, setDeleteDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showViewProfileDialog, setShowViewProfileDialog] = useState(false);
   const [profileData, setProfileData] = useState({
-    firstName: "Jane",
-    lastName: "Doe",
+    firstName: "",
+    lastName: "",
+    address: "",
+    phone: "",
     password: "",
     confirmPassword: "",
   });
+
+  const [currentProfile, setCurrentProfile] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    userType: "donor",
+  });
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        setLoading(true);
+        const response = await getUserProfile();
+        setCurrentProfile({
+          firstName: response.user.first_name || "",
+          lastName: response.user.last_name || "",
+          email: response.user.email || "",
+          phone: response.user.phone || "",
+          address: response.user.address || "",
+          userType: response.user.user_type || "donor",
+        });
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch profile:", err);
+        setError("Failed to load profile data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (showViewProfileDialog) {
+      fetchProfileData();
+    }
+  }, [showViewProfileDialog]);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -80,16 +126,17 @@ export default function DonorDashboard() {
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
+  //LOGOUT FUNCTION
   const handleLogout = async () => {
     try {
       await logout(); // API call to log out on the server
       localStorage.removeItem("sanctum_token"); // Clear token from storage
 
       toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
+        title: "🎉 See you soon!",
+        description: "You’ve been successfully logged out.",
         className:
-          "bg-green-600 text-green-800 border-green-600 text-neutral-950",
+          "border border-emerald-200 dark:border-emerald-600/50 bg-emerald-50 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
       });
 
       // Delay the redirect slightly to allow toast to show
@@ -99,30 +146,74 @@ export default function DonorDashboard() {
     } catch (error) {
       console.error("Logout failed:", error);
       toast({
-        title: "Logout Failed",
-        description: "An error occurred while logging out.",
-        variant: "destructive",
+        title: "🚫 Logout Failed",
+        description: "Oops! Something went wrong while trying to log you out.",
+        className:
+          "border border-red-300 dark:border-red-600/40 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
       });
     }
   };
-  const handleProfileUpdate = () => {
-    if (profileData.password !== profileData.confirmPassword) {
+  // Update Profile Function
+  const handleProfileUpdate = async () => {
+    try {
+      await updateUserProfile({
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        phone: profileData.phone,
+        address: profileData.address,
+        ...(profileData.password && {
+          password: profileData.password,
+          confirmPassword: profileData.confirmPassword,
+        }),
+      });
+
       toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
+        title: "Updated successfully",
+        description: "You have updated your profile successfully.",
+        className:
+          "border border-emerald-200 dark:border-emerald-600/50 bg-emerald-50 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
       });
-      return;
+      setShowProfileDialog(false);
+    } catch (error) {
+      console.error("Update error", error);
+      toast({
+        title: "Updating Profile Failed",
+        description: "An error occurred while updating Profile.",
+        className:
+          "border border-red-300 dark:border-red-600/40 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
+      });
     }
-
-    // Add your profile update logic here
-    toast({
-      title: "Profile updated",
-      description: "Your profile information has been updated successfully",
-    });
-    setShowProfileDialog(false);
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      // 1. Make the deletion request
+      await deleteUserAccount();
+
+      // 2. Clear ALL auth-related data
+      localStorage.removeItem("access_token"); // or whatever your token key is
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+
+      toast({
+        title: "Account deleted successfully",
+        description: "Your account has been deleted.",
+        className:
+          "border border-emerald-200 dark:border-emerald-600/50 bg-emerald-50 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
+      });
+
+      // 5. Force redirect with page reload to clear any state
+      window.location.href = "/login"; // Full page reload
+    } catch (error) {
+      console.error("Delete error", error);
+      toast({
+        title: "Deleting account failed",
+        description: "An error occurred while deleting your account.",
+        className:
+          "border border-red-300 dark:border-red-600/40 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
+      });
+    }
+  };
   return (
     <div
       className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${
@@ -189,19 +280,41 @@ export default function DonorDashboard() {
                 }`}
                 align="end"
               >
+                {/* New View Profile Option */}
+                <DropdownMenuItem
+                  className="cursor-pointer focus:bg-indigo-500/10 focus:text-indigo-500"
+                  onClick={() => setShowViewProfileDialog(true)} // Or your profile route
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  <span>View Profile</span>
+                </DropdownMenuItem>
+
+                {/* Existing Edit Profile Option */}
                 <DropdownMenuItem
                   className="cursor-pointer focus:bg-indigo-500/10 focus:text-indigo-500"
                   onClick={() => setShowProfileDialog(true)}
                 >
                   <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+                  <span>Edit Profile</span>
                 </DropdownMenuItem>
+
+                <DropdownMenuSeparator
+                  className={theme === "dark" ? "bg-slate-700" : "bg-slate-100"}
+                />
+
                 <DropdownMenuItem
                   className="cursor-pointer focus:bg-red-500/10 focus:text-red-500"
                   onClick={() => setShowLogoutDialog(true)}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer focus:bg-red-500/10 focus:text-red-500"
+                  onClick={() => setDeleteDialog(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Delete Account</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -237,233 +350,440 @@ export default function DonorDashboard() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Edit Profile Dialog */}
-        <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <Dialog open={DeleteDialog} onOpenChange={setDeleteDialog}>
           <DialogContent
-            className={`sm:max-w-[540px] p-0 rounded-xl overflow-hidden border-0 shadow-2xl transition-all duration-300 ${
-              theme === "dark" ? "bg-slate-900" : "bg-white"
+            className={`sm:max-w-[425px] rounded-lg ${
+              theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
             }`}
           >
-            {/* Decorative background elements */}
-            <div
-              className={`absolute -top-16 -right-16 w-48 h-48 rounded-full blur-2xl opacity-20 ${
-                theme === "dark" ? "bg-purple-600" : "bg-indigo-200"
-              }`}
-            />
-            <div
-              className={`absolute -bottom-16 -left-16 w-48 h-48 rounded-full blur-2xl opacity-20 ${
-                theme === "dark" ? "bg-indigo-600" : "bg-purple-200"
-              }`}
-            />
-
-            {/* Header with gradient */}
-            <div
-              className={`relative overflow-hidden px-6 py-4 ${
-                theme === "dark"
-                  ? "bg-gradient-to-r from-slate-800 to-slate-900"
-                  : "bg-gradient-to-r from-indigo-50 to-purple-50"
-              }`}
-            >
-              <div className="flex items-center space-x-3 z-10 relative">
-                <div
-                  className={`p-2.5 rounded-lg shadow-sm ${
-                    theme === "dark"
-                      ? "bg-indigo-900/50 text-indigo-300 border border-indigo-800/50"
-                      : "bg-white text-indigo-600 border border-indigo-100"
-                  }`}
-                >
-                  <Edit className="h-5 w-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500">
-                    Edit Profile
-                  </DialogTitle>
-                  <DialogDescription
-                    className={`text-xs ${
-                      theme === "dark" ? "text-slate-300" : "text-slate-600"
-                    }`}
-                  >
-                    Manage your account details and security settings
-                  </DialogDescription>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative px-6 py-4 space-y-5">
-              {/* Personal Info Section */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <div
-                    className={`h-6 w-1 rounded-full ${
-                      theme === "dark"
-                        ? "bg-gradient-to-b from-indigo-500 to-purple-500"
-                        : "bg-gradient-to-b from-indigo-400 to-purple-400"
-                    }`}
-                  />
-                  <h3
-                    className={`text-base font-semibold ${
-                      theme === "dark" ? "text-indigo-200" : "text-indigo-600"
-                    }`}
-                  >
-                    Personal Information
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-xs font-medium">
-                      First Name
-                    </Label>
-                    <Input
-                      id="firstName"
-                      value={profileData.firstName}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          firstName: e.target.value,
-                        })
-                      }
-                      className={`h-9 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
-                        theme === "dark"
-                          ? "bg-slate-800 border-slate-700 hover:border-indigo-500/50"
-                          : "bg-white border-slate-200 hover:border-indigo-300"
-                      } transition-colors`}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-xs font-medium">
-                      Last Name
-                    </Label>
-                    <Input
-                      id="lastName"
-                      value={profileData.lastName}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          lastName: e.target.value,
-                        })
-                      }
-                      className={`h-9 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
-                        theme === "dark"
-                          ? "bg-slate-800 border-slate-700 hover:border-indigo-500/50"
-                          : "bg-white border-slate-200 hover:border-indigo-300"
-                      } transition-colors`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Password Section */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <div
-                    className={`h-6 w-1 rounded-full ${
-                      theme === "dark"
-                        ? "bg-gradient-to-b from-purple-500 to-pink-500"
-                        : "bg-gradient-to-b from-purple-400 to-pink-400"
-                    }`}
-                  />
-                  <h3
-                    className={`text-base font-semibold ${
-                      theme === "dark" ? "text-purple-200" : "text-purple-600"
-                    }`}
-                  >
-                    Security Settings
-                  </h3>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <Label htmlFor="password" className="text-xs font-medium">
-                        New Password
-                      </Label>
-                      <span
-                        className={`text-xs ${
-                          theme === "dark" ? "text-slate-400" : "text-slate-500"
-                        }`}
-                      >
-                        At least 8 characters
-                      </span>
-                    </div>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={profileData.password}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          password: e.target.value,
-                        })
-                      }
-                      className={`h-9 text-sm focus-visible:ring-2 focus-visible:ring-purple-500/50 ${
-                        theme === "dark"
-                          ? "bg-slate-800 border-slate-700 hover:border-purple-500/50"
-                          : "bg-white border-slate-200 hover:border-purple-300"
-                      } transition-colors`}
-                      placeholder="••••••••"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="confirmPassword"
-                      className="text-xs font-medium"
-                    >
-                      Confirm Password
-                    </Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={profileData.confirmPassword}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          confirmPassword: e.target.value,
-                        })
-                      }
-                      className={`h-9 text-sm focus-visible:ring-2 focus-visible:ring-purple-500/50 ${
-                        theme === "dark"
-                          ? "bg-slate-800 border-slate-700 hover:border-purple-500/50"
-                          : "bg-white border-slate-200 hover:border-purple-300"
-                      } transition-colors`}
-                      placeholder="••••••••"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter
-              className={`px-6 py-3 border-t ${
-                theme === "dark" ? "border-slate-800" : "border-slate-100"
-              }`}
-            >
-              <Button
-                variant="ghost"
-                onClick={() => setShowProfileDialog(false)}
-                className={`rounded-lg px-4 h-9 text-xs ${
-                  theme === "dark"
-                    ? "hover:bg-slate-800 text-slate-300"
-                    : "hover:bg-slate-50 text-slate-600"
-                } transition-colors`}
-              >
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <LogOut className="h-5 w-5 text-red-500" />
+                Confirm Deleting Account
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to Delete your account ?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setDeleteDialog(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleProfileUpdate}
-                className={`rounded-lg px-4 h-9 text-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-0.5`}
-              >
-                <Save className="h-3.5 w-3.5 mr-1.5" />
-                Save Changes
+              <Button variant="destructive" onClick={handleDeleteAccount}>
+                Delete
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Rest of your existing dashboard code remains exactly the same */}
+        {/* Edit Profile Dialog */}
+        <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+          <DialogContent className="sm:max-w-[425px] p-0 rounded-lg overflow-hidden border-0 shadow-lg">
+            {/* Decorative background elements (subtler version) */}
+            <div
+              className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-xl opacity-10 ${
+                theme === "dark" ? "bg-purple-500" : "bg-indigo-200"
+              }`}
+            />
+
+            {/* Header with compact gradient */}
+            <div
+              className={`relative px-4 py-3 ${
+                theme === "dark"
+                  ? "bg-gradient-to-r from-slate-800 to-slate-900"
+                  : "bg-gradient-to-r from-indigo-50 to-purple-50"
+              }`}
+            >
+              <div className="flex items-center gap-2 z-10 relative">
+                <div
+                  className={`p-1.5 rounded-md ${
+                    theme === "dark"
+                      ? "bg-indigo-900/30 text-indigo-300"
+                      : "bg-white text-indigo-600 shadow-sm"
+                  }`}
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                </div>
+                <DialogTitle
+                  className={`text-sm font-semibold ${
+                    theme === "dark" ? "text-slate-100" : "text-slate-800"
+                  }`}
+                >
+                  Edit Profile
+                </DialogTitle>
+              </div>
+            </div>
+
+            <div className="relative px-4 py-3 space-y-3">
+              {/* Personal Info - Compact with accent */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-0.5 h-4 rounded-full ${
+                      theme === "dark"
+                        ? "bg-gradient-to-b from-indigo-400 to-purple-400"
+                        : "bg-indigo-400"
+                    }`}
+                  />
+                  <h4
+                    className={`text-xs font-medium ${
+                      theme === "dark" ? "text-indigo-200" : "text-indigo-600"
+                    }`}
+                  >
+                    Personal
+                  </h4>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder="First name"
+                    value={profileData.firstName}
+                    onChange={(e) =>
+                      setProfileData({
+                        ...profileData,
+                        firstName: e.target.value,
+                      })
+                    }
+                    className={`h-8 text-xs ${
+                      theme === "dark"
+                        ? "bg-slate-800 border-slate-700 hover:border-indigo-400/50"
+                        : "bg-white border-slate-200 hover:border-indigo-300"
+                    }`}
+                  />
+                  <Input
+                    placeholder="Last name"
+                    value={profileData.lastName}
+                    onChange={(e) =>
+                      setProfileData({
+                        ...profileData,
+                        lastName: e.target.value,
+                      })
+                    }
+                    className={`h-8 text-xs ${
+                      theme === "dark"
+                        ? "bg-slate-800 border-slate-700 hover:border-indigo-400/50"
+                        : "bg-white border-slate-200 hover:border-indigo-300"
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Contact Info - Compact with accent */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-0.5 h-4 rounded-full ${
+                      theme === "dark"
+                        ? "bg-gradient-to-b from-amber-400 to-orange-400"
+                        : "bg-amber-400"
+                    }`}
+                  />
+                  <h4
+                    className={`text-xs font-medium ${
+                      theme === "dark" ? "text-amber-200" : "text-amber-600"
+                    }`}
+                  >
+                    Contact
+                  </h4>
+                </div>
+                <Input
+                  placeholder="Address"
+                  value={profileData.address}
+                  onChange={(e) =>
+                    setProfileData({ ...profileData, address: e.target.value })
+                  }
+                  className={`h-8 text-xs ${
+                    theme === "dark"
+                      ? "bg-slate-800 border-slate-700 hover:border-amber-400/50"
+                      : "bg-white border-slate-200 hover:border-amber-300"
+                  }`}
+                />
+                <Input
+                  placeholder="Phone"
+                  value={profileData.phone}
+                  onChange={(e) =>
+                    setProfileData({ ...profileData, phone: e.target.value })
+                  }
+                  className={`h-8 text-xs ${
+                    theme === "dark"
+                      ? "bg-slate-800 border-slate-700 hover:border-amber-400/50"
+                      : "bg-white border-slate-200 hover:border-amber-300"
+                  }`}
+                />
+              </div>
+
+              {/* Password - Compact with accent */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-0.5 h-4 rounded-full ${
+                      theme === "dark"
+                        ? "bg-gradient-to-b from-purple-400 to-pink-400"
+                        : "bg-purple-400"
+                    }`}
+                  />
+                  <h4
+                    className={`text-xs font-medium ${
+                      theme === "dark" ? "text-purple-200" : "text-purple-600"
+                    }`}
+                  >
+                    Security
+                  </h4>
+                </div>
+                <Input
+                  type="password"
+                  placeholder="New password"
+                  value={profileData.password}
+                  onChange={(e) =>
+                    setProfileData({ ...profileData, password: e.target.value })
+                  }
+                  className={`h-8 text-xs ${
+                    theme === "dark"
+                      ? "bg-slate-800 border-slate-700 hover:border-purple-400/50"
+                      : "bg-white border-slate-200 hover:border-purple-300"
+                  }`}
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm password"
+                  value={profileData.confirmPassword}
+                  onChange={(e) =>
+                    setProfileData({
+                      ...profileData,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  className={`h-8 text-xs ${
+                    theme === "dark"
+                      ? "bg-slate-800 border-slate-700 hover:border-purple-400/50"
+                      : "bg-white border-slate-200 hover:border-purple-300"
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Footer with subtle gradient */}
+            <div
+              className={`px-4 py-2 border-t ${
+                theme === "dark"
+                  ? "border-slate-800 bg-gradient-to-r from-slate-800/80 to-slate-900/80"
+                  : "border-slate-100 bg-gradient-to-r from-indigo-50/50 to-purple-50/50"
+              } flex justify-end gap-2`}
+            >
+              <Button
+                variant="ghost"
+                onClick={() => setShowProfileDialog(false)}
+                className={`h-7 px-3 text-xs ${
+                  theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleProfileUpdate}
+                className="h-7 px-3 text-xs bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-sm"
+              >
+                <Save className="h-3 w-3 mr-1" />
+                Save
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={showViewProfileDialog}
+          onOpenChange={setShowViewProfileDialog}
+        >
+          <DialogContent className="sm:max-w-[425px] p-0 rounded-lg overflow-hidden border-0 shadow-lg">
+            {/* Decorative background */}
+            <div
+              className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-xl opacity-10 ${
+                theme === "dark" ? "bg-purple-500" : "bg-indigo-200"
+              }`}
+            />
+
+            {/* Header */}
+            <div
+              className={`relative px-4 py-3 ${
+                theme === "dark"
+                  ? "bg-gradient-to-r from-slate-800 to-slate-900"
+                  : "bg-gradient-to-r from-indigo-50 to-purple-50"
+              }`}
+            >
+              <div className="flex items-center gap-2 z-10 relative">
+                <div
+                  className={`p-1.5 rounded-md ${
+                    theme === "dark"
+                      ? "bg-indigo-900/30 text-indigo-300"
+                      : "bg-white text-indigo-600 shadow-sm"
+                  }`}
+                >
+                  <User className="h-3.5 w-3.5" />
+                </div>
+                <DialogTitle
+                  className={`text-sm font-semibold ${
+                    theme === "dark" ? "text-slate-100" : "text-slate-800"
+                  }`}
+                >
+                  My Profile
+                </DialogTitle>
+              </div>
+            </div>
+
+            {/* Profile Content */}
+            <div className="relative px-4 py-3 space-y-4">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">{error}</div>
+              ) : (
+                <>
+                  {/* Avatar and Basic Info */}
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-14 w-14 border-2 border-primary">
+                      <AvatarImage src="/placeholder.svg" />
+                      <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3
+                        className={`font-medium ${
+                          theme === "dark" ? "text-white" : "text-slate-900"
+                        }`}
+                      >
+                        {currentProfile.firstName} {currentProfile.lastName}
+                      </h3>
+                      <p
+                        className={`text-xs ${
+                          theme === "dark" ? "text-slate-400" : "text-slate-500"
+                        }`}
+                      >
+                        {currentProfile.userType === "donor"
+                          ? "Donor"
+                          : "Recipient"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-1 gap-3 mt-4">
+                    <div
+                      className={`p-3 rounded-lg ${
+                        theme === "dark" ? "bg-slate-800/50" : "bg-slate-50"
+                      }`}
+                    >
+                      <h4
+                        className={`text-xs font-medium mb-2 ${
+                          theme === "dark"
+                            ? "text-indigo-300"
+                            : "text-indigo-600"
+                        }`}
+                      >
+                        Contact Information
+                      </h4>
+                      <div className="space-y-2">
+                        <div>
+                          <p
+                            className={`text-xs ${
+                              theme === "dark"
+                                ? "text-slate-400"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            Email
+                          </p>
+                          <p
+                            className={`text-sm ${
+                              theme === "dark" ? "text-white" : "text-slate-900"
+                            }`}
+                          >
+                            {currentProfile.email}
+                          </p>
+                        </div>
+                        <div>
+                          <p
+                            className={`text-xs ${
+                              theme === "dark"
+                                ? "text-slate-400"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            Phone
+                          </p>
+                          <p
+                            className={`text-sm ${
+                              theme === "dark" ? "text-white" : "text-slate-900"
+                            }`}
+                          >
+                            {currentProfile.phone || "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`p-3 rounded-lg ${
+                        theme === "dark" ? "bg-slate-800/50" : "bg-slate-50"
+                      }`}
+                    >
+                      <h4
+                        className={`text-xs font-medium mb-2 ${
+                          theme === "dark" ? "text-amber-300" : "text-amber-600"
+                        }`}
+                      >
+                        Address
+                      </h4>
+                      <p
+                        className={`text-sm ${
+                          theme === "dark" ? "text-white" : "text-slate-900"
+                        }`}
+                      >
+                        {currentProfile.address || "Not provided"}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div
+              className={`px-4 py-3 border-t ${
+                theme === "dark"
+                  ? "border-slate-800 bg-gradient-to-r from-slate-800/80 to-slate-900/80"
+                  : "border-slate-100 bg-gradient-to-r from-indigo-50/50 to-purple-50/50"
+              } flex justify-end`}
+            >
+              <Button
+                variant="ghost"
+                onClick={() => setShowViewProfileDialog(false)}
+                className={`h-8 px-3 text-xs ${
+                  theme === "dark"
+                    ? "text-slate-300 hover:bg-slate-800"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowViewProfileDialog(false);
+                  setShowProfileDialog(true);
+                }}
+                className="h-8 px-3 text-xs bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-sm ml-2"
+                disabled={loading || !!error}
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit Profile
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Notifications Panel */}
         {showNotifications && (
           <Card
@@ -502,7 +822,10 @@ export default function DonorDashboard() {
         >
           <div className="relative z-10">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
-              Welcome back, Jane!
+              Welcome back,{" "}
+              <span className="text-primary">
+                {currentProfile.firstName || "User"}
+              </span>
             </h1>
             <p className="opacity-90 max-w-xl">
               Your generosity has helped 5 associations so far. Discover new
