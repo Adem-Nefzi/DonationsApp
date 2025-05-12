@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import type { UseFormReturn } from "react-hook-form";
 import type { FormValues } from "../../Signup";
 import {
@@ -11,9 +13,25 @@ import {
   EyeOff,
   ArrowRight,
   CheckCircle2,
+  Upload,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useState, useRef } from "react";
+
 interface SignUpFormProps {
   form: UseFormReturn<FormValues>;
   userType: "donor" | "recipient";
@@ -40,6 +58,7 @@ interface SignUpFormProps {
   passwordStrengthScore: number;
   setShowMap: (show: boolean) => void;
 }
+
 export default function SignUpForm({
   form,
   userType,
@@ -56,13 +75,30 @@ export default function SignUpForm({
   passwordStrength,
   passwordStrengthScore,
 }: SignUpFormProps) {
-  // Use the showMap state from props
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Add the handleAddressSelection function
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result as string);
+        // You would typically handle the file upload here or store it in form state
+        form.setValue("organizationLogo", file);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
-    <div className="glass-card w-full shadow-lg rounded-lg overflow-hidden">
+    <Card className="w-full shadow-lg overflow-hidden bg-card/95 backdrop-blur-sm border-border/50">
       {/* Card header */}
-      <div className="p-6 border-b border-border/50">
+      <CardHeader className="pb-4 border-b border-border/50">
         <div className="flex items-center gap-2 justify-center mb-2">
           <UserPlus className="h-6 w-6 text-primary" />
           <h2 className="text-2xl font-bold text-center">Create Account</h2>
@@ -70,46 +106,43 @@ export default function SignUpForm({
         <p className="text-center text-muted-foreground">
           Fill in your details to get started
         </p>
-      </div>
+      </CardHeader>
 
       {/* User type selector */}
       <div className="p-6 pb-0">
         <div className="flex rounded-md overflow-hidden border border-border">
-          <button
+          <Button
             type="button"
             onClick={() => setUserType("donor")}
-            className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
-              userType === "donor"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card hover:bg-muted"
-            }`}
+            variant={userType === "donor" ? "default" : "ghost"}
+            className="flex-1 rounded-none"
           >
             Donor
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => setUserType("recipient")}
-            className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
-              userType === "recipient"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card hover:bg-muted"
-            }`}
+            variant={userType === "recipient" ? "default" : "ghost"}
+            className="flex-1 rounded-none"
           >
             Recipient
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Form */}
-      <div className="p-6">
+      <CardContent className="p-6">
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Status message */}
           {formStatus.type && (
-            <div
-              className={`p-3 rounded-md flex items-center gap-2 text-sm ${
+            <Alert
+              variant={
+                formStatus.type === "success" ? "default" : "destructive"
+              }
+              className={`${
                 formStatus.type === "success"
                   ? "bg-green-500/10 text-green-500 border border-green-500/20"
-                  : "bg-destructive/10 text-destructive border border-destructive/20"
+                  : ""
               }`}
             >
               {formStatus.type === "success" ? (
@@ -117,8 +150,8 @@ export default function SignUpForm({
               ) : (
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
               )}
-              <span>{formStatus.message}</span>
-            </div>
+              <AlertDescription>{formStatus.message}</AlertDescription>
+            </Alert>
           )}
 
           {/* Donor Type (only for donors) */}
@@ -127,7 +160,9 @@ export default function SignUpForm({
               <Label className="text-base">Donor Type</Label>
               <RadioGroup
                 defaultValue={donorType}
-                onValueChange={(value) => setDonorType(value as "individual" | "organization")}
+                onValueChange={(value) =>
+                  setDonorType(value as "individual" | "organization")
+                }
                 className="flex gap-4 p-3 rounded-md border"
               >
                 <div className="flex items-center space-x-2">
@@ -152,17 +187,17 @@ export default function SignUpForm({
             <>
               {/* First Name field */}
               <div className="space-y-2">
-                <label htmlFor="firstName">First Name</label>
-                <input
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
                   id="firstName"
                   {...form.register("firstName")}
-                  className={`flex h-10 w-full rounded-md border ${
+                  className={
                     "firstName" in form.formState.errors ||
                     (formStatus.type === "error" &&
                       /first[_\s]?name/i.test(formStatus.message))
                       ? "border-destructive"
-                      : "border-input"
-                  } bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                      : ""
+                  }
                 />
                 {"firstName" in form.formState.errors ? (
                   <p className="text-sm font-medium text-destructive">
@@ -178,17 +213,17 @@ export default function SignUpForm({
 
               {/* Last Name field */}
               <div className="space-y-2">
-                <label htmlFor="lastName">Last Name</label>
-                <input
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
                   id="lastName"
                   {...form.register("lastName")}
-                  className={`flex h-10 w-full rounded-md border ${
+                  className={
                     "lastName" in form.formState.errors ||
                     (formStatus.type === "error" &&
                       /last[_\s]?name/i.test(formStatus.message))
                       ? "border-destructive"
-                      : "border-input"
-                  } bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                      : ""
+                  }
                 />
                 {"lastName" in form.formState.errors ? (
                   <p className="text-sm font-medium text-destructive">
@@ -204,48 +239,141 @@ export default function SignUpForm({
             </>
           )}
 
-          {/* Organization Name (only for organization donors) */}
+          {/* Organization Name and Logo (only for organization donors) */}
+          {userType === "donor" && donorType === "organization" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="organizationName">Organization Name</Label>
+                <Input
+                  id="organizationName"
+                  {...form.register("organizationName")}
+                  className={
+                    "organizationName" in form.formState.errors ||
+                    (formStatus.type === "error" &&
+                      /organization|name/i.test(formStatus.message))
+                      ? "border-destructive"
+                      : ""
+                  }
+                />
+                {"organizationName" in form.formState.errors ? (
+                  <p className="text-sm font-medium text-destructive">
+                    {form.formState.errors.organizationName?.message}
+                  </p>
+                ) : formStatus.type === "error" &&
+                  /organization|name/i.test(formStatus.message) ? (
+                  <p className="text-sm font-medium text-destructive">
+                    {formStatus.message}
+                  </p>
+                ) : null}
+              </div>
+
+              {/* Organization Logo Upload */}
+              <div className="space-y-2">
+                <Label htmlFor="organizationLogo">Organization Logo</Label>
+                <div
+                  className="flex flex-col items-center gap-4 p-4 border-2 border-dashed rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={triggerFileInput}
+                >
+                  <input
+                    type="file"
+                    id="organizationLogo"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
+
+                  {previewImage ? (
+                    <div className="relative w-32 h-32 rounded-lg overflow-hidden">
+                      <img
+                        src={previewImage || "/placeholder.svg"}
+                        alt="Organization Logo Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="absolute bottom-2 right-2 h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewImage(null);
+                          if (fileInputRef.current)
+                            fileInputRef.current.value = "";
+                        }}
+                      >
+                        <AlertCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bg-primary/10 rounded-full p-3">
+                        <Upload className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-medium">Click to upload logo</p>
+                        <p className="text-sm text-muted-foreground">
+                          SVG, PNG, JPG or GIF (max. 2MB)
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Category field - only for organization donors */}
           {userType === "donor" && donorType === "organization" && (
             <div className="space-y-2">
-              <label htmlFor="organizationName">Organization Name</label>
-              <input
-                id="organizationName"
-                {...form.register("organizationName")}
-                className={`flex h-10 w-full rounded-md border ${
-                  "organizationName" in form.formState.errors ||
-                  (formStatus.type === "error" &&
-                    /organization|name/i.test(formStatus.message))
-                    ? "border-destructive"
-                    : "border-input"
-                } bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
-              />
-              {"organizationName" in form.formState.errors ? (
+              <Label htmlFor="category">Category</Label>
+              <Select
+                onValueChange={(value) =>
+                  form.setValue(
+                    "category",
+                    value as
+                      | "Food"
+                      | "Clothes"
+                      | "Healthcare"
+                      | "Education"
+                      | "Home supplies"
+                  )
+                }
+                value={form.watch("category") as string}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Food">Food</SelectItem>
+                  <SelectItem value="Clothes">Clothes</SelectItem>
+                  <SelectItem value="Healthcare">Healthcare</SelectItem>
+                  <SelectItem value="Education">Education</SelectItem>
+                  <SelectItem value="Home supplies">Home supplies</SelectItem>
+                </SelectContent>
+              </Select>
+              {"category" in form.formState.errors && (
                 <p className="text-sm font-medium text-destructive">
-                  {form.formState.errors.organizationName?.message}
+                  {form.formState.errors.category?.message}
                 </p>
-              ) : formStatus.type === "error" &&
-                /organization|name/i.test(formStatus.message) ? (
-                <p className="text-sm font-medium text-destructive">
-                  {formStatus.message}
-                </p>
-              ) : null}
+              )}
             </div>
           )}
 
           {/* Email field - for all user types */}
           <div className="space-y-2">
-            <label htmlFor="email">Email</label>
-            <input
+            <Label htmlFor="email">Email</Label>
+            <Input
               id="email"
               type="email"
               {...form.register("email")}
-              className={`flex h-10 w-full rounded-md border ${
+              className={
                 form.formState.errors.email ||
                 (formStatus.type === "error" &&
                   /email/i.test(formStatus.message))
                   ? "border-destructive"
-                  : "border-input"
-              } bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                  : ""
+              }
             />
             {form.formState.errors.email ? (
               <p className="text-sm font-medium text-destructive">
@@ -260,29 +388,30 @@ export default function SignUpForm({
           </div>
 
           {/* Password field */}
-          {/* Password Field with Strength Indicator */}
           <div className="space-y-2">
-            <label htmlFor="password">Password</label>
+            <Label htmlFor="password">Password</Label>
             <div className="relative">
-              <input
+              <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 {...form.register("password")}
-                className={`flex h-10 w-full rounded-md border ${
+                className={
                   form.formState.errors.password ||
                   (formStatus.type === "error" &&
                     /password/i.test(formStatus.message))
-                    ? "border-destructive"
-                    : "border-input"
-                } bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 pr-10`}
+                    ? "border-destructive pr-10"
+                    : "pr-10"
+                }
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+              </Button>
             </div>
 
             {/* Error Messages */}
@@ -297,7 +426,7 @@ export default function SignUpForm({
               </p>
             ) : null}
 
-            {/* Password Strength Indicator (Keep this part!) */}
+            {/* Password Strength Indicator */}
             <div className="mt-2 space-y-2">
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map((segment) => (
@@ -391,27 +520,29 @@ export default function SignUpForm({
 
           {/* Confirm Password field */}
           <div className="space-y-2">
-            <label htmlFor="confirmPassword">Confirm Password</label>
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
             <div className="relative">
-              <input
+              <Input
                 id="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 {...form.register("confirmPassword")}
-                className={`flex h-10 w-full rounded-md border ${
+                className={
                   form.formState.errors.confirmPassword ||
                   (formStatus.type === "error" &&
                     /confirm|password/i.test(formStatus.message))
-                    ? "border-destructive"
-                    : "border-input"
-                } bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 pr-10`}
+                    ? "border-destructive pr-10"
+                    : "pr-10"
+                }
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
+                className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
               >
                 {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+              </Button>
             </div>
             {form.formState.errors.confirmPassword ? (
               <p className="text-sm font-medium text-destructive">
@@ -427,18 +558,18 @@ export default function SignUpForm({
 
           {/* Phone field - required for organization, optional for others */}
           <div className="space-y-2">
-            <label htmlFor="phone">Phone Number</label>
-            <input
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input
               id="phone"
               type="tel"
               {...form.register("phone")}
-              className={`flex h-10 w-full rounded-md border ${
+              className={
                 form.formState.errors.phone ||
                 (formStatus.type === "error" &&
                   /phone/i.test(formStatus.message))
                   ? "border-destructive"
-                  : "border-input"
-              } bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                  : ""
+              }
             />
             {form.formState.errors.phone ? (
               <p className="text-sm font-medium text-destructive">
@@ -454,18 +585,18 @@ export default function SignUpForm({
 
           {/* Address field - required for organization, optional for others */}
           <div className="space-y-2">
-            <label htmlFor="address">Address</label>
+            <Label htmlFor="address">Address</Label>
             <div className="flex gap-2">
-              <input
+              <Input
                 id="address"
                 {...form.register("address")}
-                className={`flex h-10 w-full rounded-md border ${
+                className={
                   form.formState.errors.address ||
                   (formStatus.type === "error" &&
                     /address/i.test(formStatus.message))
                     ? "border-destructive"
-                    : "border-input"
-                } bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                    : ""
+                }
               />
             </div>
             {form.formState.errors.address ? (
@@ -483,17 +614,17 @@ export default function SignUpForm({
           {/* Description field - only for organization donors */}
           {userType === "donor" && donorType === "organization" && (
             <div className="space-y-2">
-              <label htmlFor="description">Description</label>
-              <textarea
+              <Label htmlFor="description">Description</Label>
+              <Textarea
                 id="description"
                 {...form.register("description")}
-                className={`flex min-h-[80px] w-full rounded-md border ${
+                className={
                   "description" in form.formState.errors ||
                   (formStatus.type === "error" &&
                     /description/i.test(formStatus.message))
-                    ? "border-destructive"
-                    : "border-input"
-                } bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                    ? "border-destructive min-h-[80px]"
+                    : "min-h-[80px]"
+                }
               />
               {"description" in form.formState.errors ? (
                 <p className="text-sm font-medium text-destructive">
@@ -510,16 +641,17 @@ export default function SignUpForm({
 
           {/* Terms and Conditions */}
           <div className="flex items-start space-x-3 rounded-md p-4 border bg-background/50">
-            <input
-              type="checkbox"
+            <Checkbox
               id="termsAccepted"
-              {...form.register("termsAccepted")}
-              className="h-4 w-4 rounded-sm border border-primary text-primary focus:outline-none focus:ring-1 focus:ring-ring mt-1"
+              checked={form.watch("termsAccepted")}
+              onCheckedChange={(checked) => {
+                form.setValue("termsAccepted", checked as true);
+              }}
             />
             <div className="space-y-1 leading-none">
-              <label htmlFor="termsAccepted" className="text-sm font-medium">
+              <Label htmlFor="termsAccepted" className="text-sm font-medium">
                 I agree to the terms
-              </label>
+              </Label>
               {form.formState.errors.termsAccepted && (
                 <p className="text-sm font-medium text-destructive">
                   {form.formState.errors.termsAccepted.message}
@@ -529,18 +661,14 @@ export default function SignUpForm({
           </div>
 
           {/* Submit button */}
-          <button
-            type="submit"
-            className="w-full flex items-center justify-center py-2 px-4 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none"
-            disabled={loading}
-          >
+          <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <UserPlus className="mr-2 h-4 w-4 group-hover:animate-pulse" />
+              <UserPlus className="mr-2 h-4 w-4" />
             )}
             {loading ? "Creating account..." : "Create Account"}
-          </button>
+          </Button>
         </form>
 
         {/* Sign in link */}
@@ -555,7 +683,7 @@ export default function SignUpForm({
             </a>
           </p>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

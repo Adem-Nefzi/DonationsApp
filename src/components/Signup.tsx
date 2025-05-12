@@ -1,19 +1,11 @@
-"use client";
+// src/pages/Signup.tsx
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import axios from "axios";
+import { register, associationRegister } from "@/api/auth"; // Import the auth functions
 import SignUpPageUI from "@/components/layout/Signup/SignupPage";
-
-// API client configuration
-const api = axios.create({
-  baseURL: "http://localhost:8000/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
 
 // Form schema creator
 const createFormSchema = (
@@ -61,6 +53,10 @@ const createFormSchema = (
         phone: z.string().min(1, "Phone number is required"),
         address: z.string().min(1, "Address is required"),
         description: z.string().optional(),
+        category: z
+          .enum(["Food", "Clothes", "Healthcare", "Education", "Home supplies"])
+          .optional(),
+        organizationLogo: z.any().optional(), // Using any for file type
       })
       .refine((data) => data.password === data.confirmPassword, {
         message: "Passwords don't match",
@@ -138,6 +134,8 @@ export default function SignUpPage() {
         phone: "",
         address: "",
         description: "",
+        category: undefined,
+        organizationLogo: undefined,
       };
     }
 
@@ -155,68 +153,62 @@ export default function SignUpPage() {
     setFormStatus({ type: null, message: "" });
 
     try {
-      let endpoint: string;
-      let payload: Record<string, string | null | undefined>;
-
       if (userType === "donor" && donorType === "individual") {
-        endpoint = "/register";
-        payload = {
+        await register({
           first_name: "firstName" in values ? values.firstName : "",
           last_name: "lastName" in values ? values.lastName : "",
           email: values.email,
           password: values.password,
-          password_confirmation: values.confirmPassword,
-          phone: values.phone || null,
-          address: values.address || null,
           user_type: "donor",
-        };
+        });
       } else if (userType === "donor" && donorType === "organization") {
-        endpoint = "/association/register";
-        payload = {
+        // Use associationRegister function for organization registration
+        const organizationData = {
           name: "organizationName" in values ? values.organizationName : "",
           email: values.email,
           password: values.password,
-          phone: values.phone,
-          address: values.address,
-          description:
-            "description" in values ? values.description || null : null,
+          phone: values.phone || "",
+          address: values.address || "",
+          description: "description" in values ? values.description || "" : "",
+          category: "category" in values ? values.category : undefined,
+          logo_url:
+            "organizationLogo" in values ? values.organizationLogo : undefined,
         };
+
+        await associationRegister(organizationData);
       } else {
-        endpoint = "/register";
-        payload = {
+        await register({
           first_name: "firstName" in values ? values.firstName : "",
           last_name: "lastName" in values ? values.lastName : "",
           email: values.email,
           password: values.password,
-          phone: values.phone || null,
-          address: values.address || null,
           user_type: "recipient",
-        };
+        });
       }
-
-      await api.post(endpoint, payload);
 
       setFormStatus({
         type: "success",
         message: "Account created! Redirecting to login...",
       });
       setTimeout(() => (window.location.href = "/login"), 2000);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 422) {
-          const errors = error.response.data.errors;
-          const firstError = Object.values(errors)[0] as string[];
-          setFormStatus({ type: "error", message: firstError[0] });
-        } else {
-          setFormStatus({
-            type: "error",
-            message: error.response?.data?.message || "Registration failed",
-          });
-        }
+    } catch (error: unknown) {
+      const err = error as { 
+        response?: { 
+          status?: number;
+          data?: { 
+            message?: string;
+            errors?: Record<string, string[]>; 
+          }; 
+        }; 
+      };
+      if (err.response?.status === 422) {
+        const errors = err.response.data?.errors || {};
+        const firstError = Object.values(errors)[0] as string[];
+        setFormStatus({ type: "error", message: firstError[0] });
       } else {
         setFormStatus({
           type: "error",
-          message: "An unexpected error occurred",
+          message: err.response?.data?.message || "Registration failed",
         });
       }
     } finally {

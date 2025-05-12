@@ -1010,7 +1010,7 @@ export default function RecipientDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AssociationsList limit={3} />
+                <AssociationsList />
               </CardContent>
             </Card>
           </TabsContent>

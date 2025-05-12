@@ -145,12 +145,6 @@ export default function DonorDashboard() {
       }, 1500);
     } catch (error) {
       console.error("Logout failed:", error);
-      toast({
-        title: "🚫 Logout Failed",
-        description: "Oops! Something went wrong while trying to log you out.",
-        className:
-          "border border-red-300 dark:border-red-600/40 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
-      });
     }
   };
   // Update Profile Function
@@ -350,6 +344,7 @@ export default function DonorDashboard() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
         <Dialog open={DeleteDialog} onOpenChange={setDeleteDialog}>
           <DialogContent
             className={`sm:max-w-[425px] rounded-lg ${
