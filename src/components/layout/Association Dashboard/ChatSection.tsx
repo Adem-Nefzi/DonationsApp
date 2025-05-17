@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,131 +9,189 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import _ from "lodash";
+import {
+  getAssociationMessages,
+  getConversation,
+  sendToUser,
+  markMessagesAsRead,
+  type Message,
+} from "@/api/chat";
 
-// Mock data for conversations with applicants
-const applicantConversations = [
-  {
-    id: "1",
-    name: "Maria Garcia",
-    avatar: "/placeholder.svg?height=40&width=40",
-    lastMessage: "Thank you for approving my request!",
-    time: "10:30 AM",
-    unread: 2,
-    type: "applicant",
-  },
-  {
-    id: "2",
-    name: "Robert Johnson",
-    avatar: "/placeholder.svg?height=40&width=40",
-    lastMessage: "When can I come to pick up the food items?",
-    time: "Yesterday",
-    unread: 1,
-    type: "applicant",
-  },
-  {
-    id: "3",
-    name: "Aisha Patel",
-    avatar: "/placeholder.svg?height=40&width=40",
-    lastMessage: "Do you have any notebooks available?",
-    time: "Yesterday",
-    unread: 0,
-    type: "applicant",
-  },
-];
-
-// Mock data for conversations with donors
-const donorConversations = [
-  {
-    id: "4",
-    name: "John Doe",
-    avatar: "/placeholder.svg?height=40&width=40",
-    lastMessage: "I have some more clothes to donate.",
-    time: "11:45 AM",
-    unread: 1,
-    type: "donor",
-  },
-  {
-    id: "5",
-    name: "Sarah Johnson",
-    avatar: "/placeholder.svg?height=40&width=40",
-    lastMessage: "When would be a good time to drop off the food items?",
-    time: "Yesterday",
-    unread: 0,
-    type: "donor",
-  },
-];
-
-// Mock data for messages
-const messages = [
-  {
-    id: "1",
-    sender: "Maria Garcia",
-    content: "Hello, I submitted a request for winter clothes for my family.",
-    time: "10:15 AM",
-    isMe: false,
-  },
-  {
-    id: "2",
-    sender: "Me",
-    content: "Hi Maria, we've received your request and are reviewing it.",
-    time: "10:18 AM",
-    isMe: true,
-  },
-  {
-    id: "3",
-    sender: "Maria Garcia",
-    content:
-      "Thank you. We really need warm jackets and gloves for the children.",
-    time: "10:22 AM",
-    isMe: false,
-  },
-  {
-    id: "4",
-    sender: "Me",
-    content:
-      "I'm happy to let you know that we've approved your request. We have jackets, gloves, and scarves available.",
-    time: "10:25 AM",
-    isMe: true,
-  },
-  {
-    id: "5",
-    sender: "Maria Garcia",
-    content: "That's wonderful news! When can I come to pick them up?",
-    time: "10:28 AM",
-    isMe: false,
-  },
-  {
-    id: "6",
-    sender: "Me",
-    content:
-      "You can come to our center at 123 Main St anytime between 9 AM and 5 PM Monday through Friday.",
-    time: "10:30 AM",
-    isMe: true,
-  },
-];
+interface ConversationSummary {
+  user_id: number;
+  user_name: string;
+  last_message: Message;
+  unread_count: number;
+  user_type: "donor" | "recipient";
+}
 
 export default function ChatSection() {
-  const [activeTab, setActiveTab] = useState("applicants");
-  const [activeConversation, setActiveConversation] = useState(
-    applicantConversations[0]
+  const [activeTab, setActiveTab] = useState<"applicants" | "donors">(
+    "applicants"
   );
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [filteredConversations, setFilteredConversations] = useState<
+    ConversationSummary[]
+  >([]);
+  const [activeConversation, setActiveConversation] =
+    useState<ConversationSummary | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useMobile();
   const [showConversations, setShowConversations] = useState(!isMobile);
 
-  const conversations =
-    activeTab === "applicants" ? applicantConversations : donorConversations;
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const data = await getAssociationMessages();
 
-  const filteredConversations = conversations.filter((conv) =>
-    conv.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+        const grouped = _.groupBy(
+          data.messages,
+          (msg: Message) => msg.sender?.id || msg.sender_id
+        );
 
-  const handleSendMessage = () => {
-    if (newMessage.trim() === "") return;
-    // In a real app, you would send the message to the backend
-    console.log("Sending message:", newMessage);
-    setNewMessage("");
+        const convs: ConversationSummary[] = Object.entries(grouped).map(
+          ([userIdStr, messages]) => {
+            const sorted = messages.sort(
+              (a, b) =>
+                new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
+            );
+            const latest = sorted[0];
+            const unreadCount = messages.filter((m) => !m.read_at).length;
+
+            return {
+              user_id: Number.parseInt(userIdStr),
+              user_name: latest.sender
+                ? `${latest.sender.first_name} ${latest.sender.last_name}`
+                : "Unknown",
+              last_message: latest,
+              unread_count: unreadCount,
+              user_type: latest.sender?.user_type || "recipient",
+            };
+          }
+        );
+
+        setConversations(convs);
+        setFilteredConversations(convs);
+        if (convs.length > 0) {
+          setActiveConversation(convs[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching conversations:", error);
+      }
+    };
+
+    fetchConversations();
+  }, []);
+
+  useEffect(() => {
+    if (activeConversation) {
+      const fetchMessages = async () => {
+        try {
+          const data = await getConversation(activeConversation.user_id);
+
+          // Process messages to ensure correct sender/receiver identification
+          const processedMessages: Message[] = data.messages.map((message) => {
+            // If the message doesn't have a sender_type or receiver_type, determine them
+            if (!message.sender_type || !message.receiver_type) {
+              // If the sender is not the user, it must be from the association
+              if (message.sender_id !== activeConversation.user_id) {
+                return {
+                  ...message,
+                  sender_type: "association" as "association" | "user",
+                  receiver_type: "user" as "association" | "user",
+                };
+              } else {
+                return {
+                  ...message,
+                  sender_type: "user" as "association" | "user",
+                  receiver_type: "association" as "association" | "user",
+                };
+              }
+            }
+            return message;
+          });
+
+          setMessages(processedMessages);
+          await markMessagesAsRead(activeConversation.user_id);
+
+          // Update unread count after marking as read
+          setConversations((prev) =>
+            prev.map((conv) =>
+              conv.user_id === activeConversation.user_id
+                ? { ...conv, unread_count: 0 }
+                : conv
+            )
+          );
+        } catch (error) {
+          console.error("Error fetching messages:", error);
+        }
+      };
+
+      fetchMessages();
+    }
+  }, [activeConversation]);
+
+  useEffect(() => {
+    const filtered = conversations.filter(
+      (conv) =>
+        conv.user_type ===
+          (activeTab === "applicants" ? "recipient" : "donor") &&
+        conv.user_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredConversations(filtered);
+  }, [searchQuery, activeTab, conversations]);
+
+  const handleSendMessage = async () => {
+    if (newMessage.trim() === "" || !activeConversation) return;
+    try {
+      const sentMessage = await sendToUser(
+        activeConversation.user_id,
+        newMessage
+      );
+
+      // Ensure the message has the correct sender_type and receiver_type
+      const messageWithCorrectTypes: Message = {
+        ...sentMessage,
+        sender_type: "association", // Explicitly set sender type
+        receiver_type: "user", // Explicitly set receiver type
+      };
+
+      setMessages((prev) => [...prev, messageWithCorrectTypes]);
+      setNewMessage("");
+
+      // Update last message in conversation list
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.user_id === activeConversation.user_id
+            ? {
+                ...conv,
+                last_message: {
+                  ...messageWithCorrectTypes,
+                  message_content: newMessage,
+                  sent_at: new Date().toISOString(),
+                },
+              }
+            : conv
+        )
+      );
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  // Helper function to determine if a message is from the association
+  const isAssociationMessage = (message: Message): boolean => {
+    // Check both sender_type and sender_id to ensure accurate identification
+    // If the message was sent by the association, sender_type will be "association"
+    // If the message was received by the association, receiver_type will be "association" and sender_type will be "user"
+    return (
+      message.sender_type === "association" ||
+      (message.receiver_id === activeConversation?.user_id &&
+        message.sender_type !== "user")
+    );
   };
 
   return (
@@ -144,7 +202,9 @@ export default function ChatSection() {
             <Tabs
               defaultValue="applicants"
               value={activeTab}
-              onValueChange={setActiveTab}
+              onValueChange={(val) =>
+                setActiveTab(val as "applicants" | "donors")
+              }
             >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="applicants" className="text-xs">
@@ -168,9 +228,11 @@ export default function ChatSection() {
           <ScrollArea className="h-[calc(450px-85px)]">
             {filteredConversations.map((conversation) => (
               <div
-                key={conversation.id}
+                key={conversation.user_id}
                 className={`flex items-start gap-2 p-2 hover:bg-muted/50 cursor-pointer ${
-                  activeConversation.id === conversation.id ? "bg-muted" : ""
+                  activeConversation?.user_id === conversation.user_id
+                    ? "bg-muted"
+                    : ""
                 }`}
                 onClick={() => {
                   setActiveConversation(conversation);
@@ -179,8 +241,8 @@ export default function ChatSection() {
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage
-                    src={conversation.avatar || "/placeholder.svg"}
-                    alt={conversation.name}
+                    src="/placeholder.svg"
+                    alt={conversation.user_name}
                   />
                   <AvatarFallback>
                     <User className="h-4 w-4" />
@@ -188,18 +250,25 @@ export default function ChatSection() {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
-                    <h4 className="font-medium text-xs">{conversation.name}</h4>
+                    <h4 className="font-medium text-xs">
+                      {conversation.user_name}
+                    </h4>
                     <span className="text-[10px] text-muted-foreground">
-                      {conversation.time}
+                      {new Date(
+                        conversation.last_message.sent_at
+                      ).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
-                    {conversation.lastMessage}
+                    {conversation.last_message.message_content}
                   </p>
                 </div>
-                {conversation.unread > 0 && (
+                {conversation.unread_count > 0 && (
                   <Badge className="ml-auto h-4 w-4 flex items-center justify-center p-0 text-[10px]">
-                    {conversation.unread}
+                    {conversation.unread_count}
                   </Badge>
                 )}
               </div>
@@ -223,8 +292,8 @@ export default function ChatSection() {
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
               <AvatarImage
-                src={activeConversation?.avatar || "/placeholder.svg"}
-                alt={activeConversation?.name}
+                src="/placeholder.svg"
+                alt={activeConversation?.user_name || ""}
               />
               <AvatarFallback>
                 <User className="h-3 w-3" />
@@ -232,43 +301,71 @@ export default function ChatSection() {
             </Avatar>
             <div>
               <h4 className="font-medium text-xs">
-                {activeConversation?.name}
+                {activeConversation?.user_name}
               </h4>
               <p className="text-[10px] text-muted-foreground">
-                {activeConversation?.type === "applicant"
-                  ? "Need: Winter Clothes"
+                {activeConversation?.user_type === "recipient"
+                  ? "Applicant"
                   : "Donor"}
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
-            {/* Additional actions could go here */}
-          </div>
         </div>
 
         <ScrollArea className="flex-1 p-3">
-          <div className="space-y-3">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.isMe ? "justify-end" : "justify-start"
-                }`}
-              >
+          <div className="space-y-4">
+            {messages.map((message) => {
+              // Determine if this message is from the association
+              const fromAssociation = isAssociationMessage(message);
+
+              return (
                 <div
-                  className={`max-w-[80%] rounded-lg p-2 ${
-                    message.isMe
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  }`}
+                  key={message.id}
+                  className={`flex ${
+                    fromAssociation ? "justify-end" : "justify-start"
+                  } gap-2`}
                 >
-                  <p className="text-xs">{message.content}</p>
-                  <span className="text-[10px] opacity-70 block text-right mt-1">
-                    {message.time}
-                  </span>
+                  {!fromAssociation && (
+                    <Avatar className="h-6 w-6 mt-auto">
+                      <AvatarImage
+                        src="/placeholder.svg"
+                        alt={activeConversation?.user_name || ""}
+                      />
+                      <AvatarFallback>
+                        <User className="h-3 w-3" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div
+                    className={`max-w-[80%] rounded-lg p-2 ${
+                      fromAssociation
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
+                    }`}
+                  >
+                    {!fromAssociation && (
+                      <p className="text-[10px] font-medium mb-1">
+                        {activeConversation?.user_name}
+                      </p>
+                    )}
+                    <p className="text-xs">{message.message_content}</p>
+                    <span className="text-[10px] opacity-70 block text-right mt-1">
+                      {new Date(message.sent_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                  {fromAssociation && (
+                    <Avatar className="h-6 w-6 mt-auto bg-secondary">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        A
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
 

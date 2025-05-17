@@ -82,3 +82,13 @@ export const associationLogin = async (data: LoginData) => {
   localStorage.setItem("user", JSON.stringify(response.data.association));
   return response.data;
 };
+
+export const getCurrentUser = () => {
+  const userData = localStorage.getItem("user");
+  return userData ? JSON.parse(userData) : null;
+};
+
+export const getUserType = () => {
+  const user = getCurrentUser();
+  return user?.user_type; // 'donor', 'recipient', or 'association'
+};

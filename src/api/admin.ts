@@ -127,6 +127,12 @@ export const restoreAssociation = async (id: string) => {
   return response.data;
 };
 
+//Force delete user
+export const adminForceDeleteUser = async (userId: string) => {
+  const response = await api.delete(`/users/${userId}/force`);
+  return response.data;
+};
+
 export const getAllAssociations = async () => {
   const response = await api.get("/associations");
   return response.data;

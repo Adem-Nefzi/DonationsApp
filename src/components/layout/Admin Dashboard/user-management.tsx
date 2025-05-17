@@ -46,6 +46,7 @@ import {
   Filter,
   AlertCircle,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import {
   Select,
@@ -63,6 +64,7 @@ import {
   adminRestoreUser,
   type User as ApiUser,
   adminGetDeletedUsers,
+  adminForceDeleteUser,
 } from "@/api/admin";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -86,6 +88,7 @@ export default function UserManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
+  const [isForceDeleteDialogOpen, setIsForceDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
   const [currentUser, setCurrentUser] = useState<ApiUser | null>(null);
   const [activeTab, setActiveTab] = useState("active");
@@ -255,6 +258,30 @@ export default function UserManagement() {
         variant: "destructive",
       });
       setError("Failed to delete user. Please try again.");
+    }
+  };
+
+  // Function to handle force delete user
+  const handleForceDeleteUser = async () => {
+    if (!currentUser) return;
+    try {
+      await adminForceDeleteUser(currentUser.id);
+      setUsers(users.filter((user) => user.id !== currentUser.id));
+      toast({
+        title: "User permanently deleted",
+        description: "The user has been completely removed from the system.",
+        className:
+          "border-red-200 dark:border-red-600/50 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
+      });
+      setIsDeleteDialogOpen(false);
+    } catch (err) {
+      console.error("Error permanently deleting user:", err);
+      toast({
+        title: "Failed to permanently delete user",
+        description: "Please try again or check permissions.",
+        variant: "destructive",
+      });
+      setError("Failed to permanently delete user. Please try again.");
     }
   };
 
@@ -802,6 +829,16 @@ export default function UserManagement() {
                                       <RefreshCw className="mr-2 h-4 w-4" />{" "}
                                       Restore user
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-destructive"
+                                      onClick={() => {
+                                        setCurrentUser(user);
+                                        setIsForceDeleteDialogOpen(true);
+                                      }}
+                                    >
+                                      <Trash className="mr-2 h-4 w-4" /> Delete
+                                      User Permanently
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
@@ -817,7 +854,6 @@ export default function UserManagement() {
           </Card>
         </TabsContent>
       </Tabs>
-
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -897,7 +933,6 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -1004,7 +1039,70 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      <Dialog
+        open={isForceDeleteDialogOpen}
+        onOpenChange={setIsForceDeleteDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              Permanently Delete User
+            </DialogTitle>
+            <DialogDescription>
+              This will{" "}
+              <span className="font-bold text-destructive">
+                completely remove
+              </span>{" "}
+              the user and all their data.
+              <span className="block mt-1">
+                This action <span className="font-bold underline">cannot</span>{" "}
+                be undone.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          {currentUser && (
+            <div className="flex items-center gap-4 py-4">
+              <Avatar className="h-10 w-10 border border-destructive/30">
+                <AvatarImage
+                  src="/placeholder.svg"
+                  alt={`${currentUser.first_name} ${currentUser.last_name}`}
+                />
+                <AvatarFallback className="bg-destructive/10 text-destructive">
+                  {currentUser.first_name.charAt(0)}
+                  {currentUser.last_name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium">
+                  {currentUser.first_name} {currentUser.last_name}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {currentUser.email}
+                </p>
+                <p className="text-xs text-destructive mt-1">
+                  ID: {currentUser.id}
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsForceDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleForceDeleteUser}
+              className="bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-[500px] rounded-xl">
           <DialogHeader className="px-1">

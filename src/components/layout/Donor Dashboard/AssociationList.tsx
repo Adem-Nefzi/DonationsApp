@@ -40,6 +40,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
 
 const categories = [
   "All",
@@ -49,7 +50,7 @@ const categories = [
   "Education",
   "Home supplies",
 ];
-
+import { createOffer } from "@/api/donation";
 export default function AssociationsTable() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -66,6 +67,57 @@ export default function AssociationsTable() {
     title: "",
     description: "",
   });
+
+  const handleDonationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedAssociation?.id) {
+      toast({
+        title: "No association selected",
+        description: "Please select an association to donate to.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 🔐 Get donor ID from localStorage
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = user.id;
+
+    if (!userId) {
+      toast({
+        title: "Not authenticated",
+        description: "You must be logged in as a donor to donate.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await createOffer({
+        association_id: Number(selectedAssociation.id),
+        user_id: userId,
+        title: donationForm.title,
+        description: donationForm.description,
+      });
+
+      toast({
+        title: "Donation submitted!",
+        description: "Thank you for your generosity.",
+        className:
+          "border-emerald-200 dark:border-emerald-600/50 bg-emerald-50 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
+      });
+
+      setDonationDialogOpen(false);
+      setDonationForm({ title: "", description: "" });
+    } catch (error) {
+      console.error("Error submitting donation:", error);
+      toast({
+        title: "Donation failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Fetch all associations on component mount
   useEffect(() => {
@@ -120,17 +172,6 @@ export default function AssociationsTable() {
   const openDonationDialog = (association: ExtendedAssociation) => {
     setSelectedAssociation(association);
     setDonationDialogOpen(true);
-  };
-
-  const handleDonationSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Here you would typically send the donation data to your API
-    console.log("Donation submitted for:", selectedAssociation?.name);
-    console.log("Donation details:", donationForm);
-    // Reset the form after submission
-    setDonationForm({ title: "", description: "" });
-    setDonationDialogOpen(false);
-    // Show success message or redirect
   };
 
   return (
