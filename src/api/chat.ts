@@ -15,6 +15,7 @@ export interface Message {
     last_name: string;
     email: string;
     user_type?: "donor" | "recipient";
+    name?: string; // For associations
   };
 }
 
@@ -82,27 +83,23 @@ export const getAssociationMessages = async (): Promise<{
 };
 
 /**
+ * Get all messages received by a user
+ * (For user dashboard)
+ */
+export const getUserMessages = async (): Promise<{
+  messages: Message[];
+  total_unread: number;
+}> => {
+  const response = await api.get("/user/messages");
+  return response.data;
+};
+
+/**
  * Mark messages as read
  * Works for both user types and associations
  */
 export const markMessagesAsRead = async (senderId: number): Promise<void> => {
   await api.post(`/chat/mark-read/${senderId}`);
-};
-
-/**
- * Get all conversations for current user
- * (Returns list of associations the user has chatted with)
- */
-export const getUserConversations = async (): Promise<
-  Array<{
-    association_id: number;
-    association_name: string;
-    last_message: Message;
-    unread_count: number;
-  }>
-> => {
-  const response = await api.get("/user/conversations");
-  return response.data;
 };
 
 // Type guards for user differentiation

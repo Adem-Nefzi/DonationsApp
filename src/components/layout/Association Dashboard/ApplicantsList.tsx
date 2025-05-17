@@ -1,102 +1,118 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, User, XCircle } from "lucide-react";
+import { useMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, MessageSquare, Check, X, User } from "lucide-react";
+  getAssociationRequests,
+  updateRequestStatus,
+  type Offer as BaseOffer,
+} from "@/api/donation";
 
-// Mock data for applicants
-const applicantsData = [
-  {
-    id: "1",
-    name: "Maria Garcia",
-    avatar: "/placeholder.svg?height=40&width=40",
-    need: "Winter Clothes",
-    status: "pending",
-    date: "2023-12-15",
-    message:
-      "I'm a single mother with 3 children and we need warm clothes for the winter.",
-  },
-  {
-    id: "2",
-    name: "Robert Johnson",
-    avatar: "/placeholder.svg?height=40&width=40",
-    need: "Food Assistance",
-    status: "approved",
-    date: "2023-12-14",
-    message: "Recently lost my job and need help with groceries for my family.",
-  },
-  {
-    id: "3",
-    name: "Aisha Patel",
-    avatar: "/placeholder.svg?height=40&width=40",
-    need: "School Supplies",
-    status: "pending",
-    date: "2023-12-13",
-    message: "Need school supplies for my children for the upcoming semester.",
-  },
-  {
-    id: "4",
-    name: "James Wilson",
-    avatar: "/placeholder.svg?height=40&width=40",
-    need: "Medical Supplies",
-    status: "rejected",
-    date: "2023-12-12",
-    message: "I have a chronic condition and need help with medical supplies.",
-  },
-  {
-    id: "5",
-    name: "Sofia Martinez",
-    avatar: "/placeholder.svg?height=40&width=40",
-    need: "Winter Clothes",
-    status: "approved",
-    date: "2023-12-11",
-    message:
-      "My family recently moved here and we're not prepared for the cold weather.",
-  },
-];
+// Extended Offer type with user property
+type Offer = BaseOffer & {
+  user?: {
+    avatar?: string;
+    first_name?: string;
+    last_name?: string;
+  };
+};
+import { toast } from "@/hooks/use-toast";
 
-type ApplicantsListProps = {
+type DonationsListProps = {
+  associationId: number; // Changed from string to number
   limit?: number;
 };
+const user = JSON.parse(localStorage.getItem("user") || "{}");
+export default function DonationsList({
+  associationId = user.id, // Changed from string to number
+  limit,
+}: DonationsListProps) {
+  const [donations, setDonations] = useState<Offer[]>([]);
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
+  const isMobile = useMobile();
+  const [loading, setLoading] = useState(false);
 
-export default function ApplicantsList({ limit }: ApplicantsListProps) {
-  const [filter, setFilter] = useState("all");
-  const [applicants, setApplicants] = useState(applicantsData);
+  useEffect(() => {
+    if (!associationId) return;
 
-  const filteredApplicants = applicants
-    .filter((applicant) => {
-      if (filter === "all") return true;
-      return applicant.status === filter;
-    })
-    .slice(0, limit || applicants.length);
+    const fetchDonations = async () => {
+      setLoading(true);
 
-  const handleStatusChange = (id: string, newStatus: string) => {
-    setApplicants(
-      applicants.map((app) =>
-        app.id === id ? { ...app, status: newStatus } : app
-      )
-    );
-  };
+      try {
+        const response = await getAssociationRequests(associationId);
 
-  const getStatusColor = (status: string) => {
+        // If we get this far but no logs appear, the issue is in getAssociationOffers
+        const offers = Array.isArray(response)
+          ? response
+          : response.offers || response.data || [];
+
+        setDonations(offers);
+      } catch (error) {
+        toast({
+          title: "Failed to load donations",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDonations();
+  }, [associationId]);
+
+  const filteredDonations = donations
+    .filter((donation) => filter === "all" || donation.status === filter)
+    .slice(0, limit || donations.length);
+
+  const getStatusColor = (status: Offer["status"]) => {
     switch (status) {
-      case "approved":
+      case "approved": // Changed from "approved"
         return "bg-green-500";
+      case "pending":
+        return "bg-yellow-500";
       case "rejected":
         return "bg-red-500";
       default:
-        return "bg-yellow-500";
+        return "bg-gray-500";
+    }
+  };
+
+  const handleUpdateStatus = async (
+    id: number, // Changed from string to number
+    status: "approved" | "rejected"
+  ) => {
+    try {
+      await updateRequestStatus(id, associationId, status); // Added associationId
+      setDonations((prev) =>
+        prev.map((don) => (don.id === id ? { ...don, status } : don))
+      );
+      toast({
+        title: `Offer ${status}`,
+        description: `Offer was successfully ${status}.`,
+        className:
+          "border-emerald-200 dark:border-emerald-600/50 bg-emerald-50 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
+      });
+    } catch (error) {
+      console.error("Failed to update offer status:", error);
+      toast({
+        title: "Failed to update offer",
+        description: "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -112,18 +128,18 @@ export default function ApplicantsList({ limit }: ApplicantsListProps) {
             All
           </Button>
           <Button
-            variant={filter === "pending" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("pending")}
-          >
-            Pending
-          </Button>
-          <Button
             variant={filter === "approved" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("approved")}
           >
             Approved
+          </Button>
+          <Button
+            variant={filter === "pending" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("pending")}
+          >
+            Pending
           </Button>
           <Button
             variant={filter === "rejected" ? "default" : "outline"}
@@ -135,94 +151,105 @@ export default function ApplicantsList({ limit }: ApplicantsListProps) {
         </div>
       )}
 
-      <div className="space-y-3">
-        {filteredApplicants.map((applicant) => (
-          <Card key={applicant.id}>
-            <CardContent className="p-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-2">
-                  <Avatar className="h-8 w-8 border-2 border-background">
-                    <AvatarImage
-                      src={applicant.avatar || "/placeholder.svg"}
-                      alt={applicant.name}
-                    />
-                    <AvatarFallback>
-                      <User className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
+      <div className="rounded-md border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[180px]">Donor</TableHead>
+              {!isMobile && <TableHead>Title</TableHead>}
+              {!isMobile && <TableHead>Description</TableHead>}
+              <TableHead>Status</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead className="w-[80px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : filteredDonations.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center">
+                  No donations found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredDonations.map((donation) => (
+                <TableRow key={donation.id}>
+                  <TableCell>
                     <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-sm">
-                        {applicant.name}
-                      </h4>
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage
+                          src={donation.user?.avatar || "/placeholder.svg"}
+                        />
+                        <AvatarFallback>
+                          <User className="h-3 w-3" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium text-xs">
+                        {donation.user?.first_name && donation.user?.last_name
+                          ? `${donation.user.first_name} ${donation.user.last_name}`
+                          : `Donor #${donation.user_id}`}
+                      </span>
+                    </div>
+                  </TableCell>
+                  {!isMobile && (
+                    <TableCell className="text-xs">{donation.title}</TableCell>
+                  )}
+                  {!isMobile && (
+                    <TableCell className="text-xs truncate max-w-xs">
+                      {donation.description}
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
                       <div
                         className={`h-2 w-2 rounded-full ${getStatusColor(
-                          applicant.status
+                          donation.status
                         )}`}
                       />
+                      <span className="capitalize text-xs">
+                        {donation.status}
+                      </span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Need: {applicant.need}
-                    </p>
-                    <p className="text-xs mt-1">{applicant.message}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className="text-[10px]">
-                        {applicant.date}
-                      </Badge>
-                      <Badge
-                        variant={
-                          applicant.status === "approved"
-                            ? "default"
-                            : applicant.status === "rejected"
-                            ? "destructive"
-                            : "secondary"
-                        }
-                        className="text-[10px]"
-                      >
-                        {applicant.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <MoreHorizontal className="h-3 w-3" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel className="text-xs">
-                        Actions
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-xs" onClick={() => {}}>
-                        <MessageSquare className="mr-2 h-3 w-3" /> Message
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-xs"
-                        onClick={() =>
-                          handleStatusChange(applicant.id, "approved")
-                        }
-                      >
-                        <Check className="mr-2 h-3 w-3" /> Approve
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-xs"
-                        onClick={() =>
-                          handleStatusChange(applicant.id, "rejected")
-                        }
-                      >
-                        <X className="mr-2 h-3 w-3" /> Reject
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {new Date(donation.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {donation.status === "pending" && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() =>
+                            handleUpdateStatus(donation.id, "approved")
+                          }
+                          title="Accept"
+                        >
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() =>
+                            handleUpdateStatus(donation.id, "rejected")
+                          }
+                          title="Reject"
+                        >
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

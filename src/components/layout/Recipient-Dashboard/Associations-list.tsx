@@ -49,6 +49,7 @@ import type { ExtendedAssociation } from "@/api/admin";
 import { fetchAllAssociations } from "@/api/crud";
 import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
+import { createRecipientRequest } from "@/api/donation";
 
 const categories = [
   "All",
@@ -160,16 +161,55 @@ export default function AssociationsTable() {
     setRequestHelpDialogOpen(true);
   };
 
-  const handleRequestSubmit = (e: React.FormEvent) => {
+  const handleDonationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Help request submitted for:", selectedAssociation?.name);
-    console.log("Request details:", requestForm);
-    setRequestForm({ title: "", description: "" });
-    setRequestHelpDialogOpen(false);
-    toast({
-      title: "Help Request Submitted",
-      description: `Your request to ${selectedAssociation?.name} has been sent successfully.`,
-    });
+
+    if (!selectedAssociation?.id) {
+      toast({
+        title: "No association selected",
+        description: "Please select an association to donate to.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 🔐 Get donor ID from localStorage
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = user.id;
+
+    if (!userId) {
+      toast({
+        title: "Not authenticated",
+        description: "You must be logged in as a donor to donate.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await createRecipientRequest({
+        association_id: Number(selectedAssociation.id),
+        user_id: userId,
+        title: requestForm.title,
+        description: requestForm.description,
+      });
+
+      toast({
+        title: "Donation submitted!",
+        description: "Thank you for your generosity.",
+        className:
+          "border-emerald-200 dark:border-emerald-600/50 bg-emerald-50 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100 rounded-2xl px-5 py-4 shadow-lg font-medium",
+      });
+
+      setRequestHelpDialogOpen(false);
+      setRequestForm({ title: "", description: "" });
+    } catch (error) {
+      console.error("Error submitting donation:", error);
+      toast({
+        title: "Donation failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -519,7 +559,7 @@ export default function AssociationsTable() {
               Please provide details about your help request
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleRequestSubmit} className="space-y-4">
+          <form onSubmit={handleDonationSubmit} className="space-y-4">
             <div>
               <Label htmlFor="request-title">Request Title</Label>
               <Input
