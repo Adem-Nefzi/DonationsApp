@@ -16,18 +16,29 @@ import {
   markMessagesAsRead,
   type Message as ApiMessage,
 } from "@/api/chat";
+import { fetchAllAssociations } from "@/api/crud"; // Adjust the import path as needed
 
 // Extend the Message type with additional fields used in the component
 interface Message extends ApiMessage {
   sender_name?: string;
 }
 
+interface Association {
+  id: number;
+  name: string;
+  avatar?: string;
+  logo?: string; // Some APIs might use logo instead of avatar
+  description?: string;
+  category?: string;
+}
+
 interface ConversationSummary {
   association_id: number;
   association_name: string;
   association_avatar?: string;
-  last_message: Message;
+  last_message?: Message;
   unread_count: number;
+  has_conversation: boolean;
 }
 
 export default function DonorChatSection() {
@@ -42,64 +53,147 @@ export default function DonorChatSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useMobile();
   const [showConversations, setShowConversations] = useState(!isMobile);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchConversations = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getUserMessages();
+        setLoading(true);
+
+        // Fetch all associations
+        const associationsData = await fetchAllAssociations();
+        const associations: Association[] = Array.isArray(associationsData)
+          ? associationsData
+          : associationsData.associations || [];
+
+        // Create a map of all associations for quick lookup
+        const associationsMap = new Map(
+          associations.map((assoc) => [
+            assoc.id,
+            {
+              name: assoc.name,
+              avatar: assoc.avatar || assoc.logo,
+            },
+          ])
+        );
+
+        // Fetch user messages to get existing conversations
+        const messagesData = await getUserMessages();
+        const userMessages = messagesData.messages || [];
 
         // Group messages by association
         const grouped = _.groupBy(
-          data.messages,
-          (msg: Message) => msg.sender_id // Group by sender_id since associations are the senders
+          userMessages,
+          (msg: Message) => msg.sender_id
         );
 
-        // Create conversation summaries
-        const convs: ConversationSummary[] = Object.entries(grouped).map(
-          ([associationIdStr, messages]) => {
-            const sorted = messages.sort((a, b) => {
-              // Ensure we're working with Message objects
-              const aMessage = a as Message;
-              const bMessage = b as Message;
-              return (
-                new Date(bMessage.sent_at).getTime() -
-                new Date(aMessage.sent_at).getTime()
-              );
-            });
-            const latest = sorted[0];
-            const unreadCount = messages.filter(
-              (m) => !(m as Message).read_at
-            ).length;
+        // Create conversation summaries from existing messages
+        const existingConversations: ConversationSummary[] = Object.entries(
+          grouped
+        ).map(([associationIdStr, messages]) => {
+          const associationId = Number.parseInt(associationIdStr);
+          const sorted = messages.sort((a, b) => {
+            const aMessage = a as Message;
+            const bMessage = b as Message;
+            return (
+              new Date(bMessage.sent_at).getTime() -
+              new Date(aMessage.sent_at).getTime()
+            );
+          });
 
-            return {
-              association_id: Number.parseInt(associationIdStr),
-              association_name:
-                ((latest as Message).sender &&
-                  (latest as Message).sender?.name) ||
-                "Unknown Association",
-              last_message: latest as Message, // Explicitly cast to Message type
-              unread_count: unreadCount,
-            };
+          const latest = sorted[0];
+          const unreadCount = messages.filter(
+            (m) => !(m as Message).read_at
+          ).length;
+
+          // Get association details from the map
+          const associationDetails = associationsMap.get(associationId);
+
+          return {
+            association_id: associationId,
+            association_name:
+              associationDetails?.name ||
+              ((latest as Message).sender &&
+                (latest as Message).sender?.name) ||
+              "Unknown Association",
+            association_avatar: associationDetails?.avatar,
+            last_message: latest as Message,
+            unread_count: unreadCount,
+            has_conversation: true,
+          };
+        });
+
+        // Create a set of association IDs that already have conversations
+        const existingAssociationIds = new Set(
+          existingConversations.map((conv) => conv.association_id)
+        );
+
+        // Add associations that don't have conversations yet
+        const additionalConversations: ConversationSummary[] = associations
+          .filter((assoc) => !existingAssociationIds.has(assoc.id))
+          .map((assoc) => ({
+            association_id: assoc.id,
+            association_name: assoc.name,
+            association_avatar: assoc.avatar || assoc.logo,
+            unread_count: 0,
+            has_conversation: false,
+          }));
+
+        // Combine and sort all conversations
+        const allConversations = [
+          ...existingConversations,
+          ...additionalConversations,
+        ].sort((a, b) => {
+          // First sort by whether they have conversations
+          if (a.has_conversation && !b.has_conversation) return -1;
+          if (!a.has_conversation && b.has_conversation) return 1;
+
+          // If both have conversations, sort by last message time
+          if (
+            a.has_conversation &&
+            b.has_conversation &&
+            a.last_message &&
+            b.last_message
+          ) {
+            return (
+              new Date(b.last_message.sent_at).getTime() -
+              new Date(a.last_message.sent_at).getTime()
+            );
           }
-        );
 
-        setConversations(convs);
-        setFilteredConversations(convs);
-        if (convs.length > 0) {
-          setActiveConversation(convs[0]);
+          // Otherwise sort alphabetically
+          return a.association_name.localeCompare(b.association_name);
+        });
+
+        setConversations(allConversations);
+        setFilteredConversations(allConversations);
+
+        // Set active conversation if there is one
+        if (allConversations.length > 0) {
+          // Prefer conversations with messages
+          const conversationWithMessages = allConversations.find(
+            (c) => c.has_conversation
+          );
+          setActiveConversation(
+            conversationWithMessages || allConversations[0]
+          );
         }
       } catch (error) {
-        console.error("Error fetching conversations:", error);
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchConversations();
+    fetchData();
   }, []);
 
   useEffect(() => {
     if (activeConversation) {
       const fetchMessages = async () => {
         try {
+          // Only fetch messages if this association has a conversation
+          // or if we're starting a new conversation
           const data = await getConversation(activeConversation.association_id);
 
           // Process messages to ensure correct sender/receiver identification
@@ -111,8 +205,10 @@ export default function DonorChatSection() {
 
             return {
               ...message,
+              // Ensure proper sender type is set
               sender_type: isFromUser ? "user" : "association",
               receiver_type: isFromUser ? "association" : "user",
+              // Add display name for UI
               sender_name: isFromUser
                 ? "You"
                 : activeConversation.association_name,
@@ -120,18 +216,24 @@ export default function DonorChatSection() {
           });
 
           setMessages(processedMessages);
-          await markMessagesAsRead(activeConversation.association_id);
 
-          // Update unread count after marking as read
-          setConversations((prev) =>
-            prev.map((conv) =>
-              conv.association_id === activeConversation.association_id
-                ? { ...conv, unread_count: 0 }
-                : conv
-            )
-          );
+          // Only mark as read if there are messages
+          if (processedMessages.length > 0) {
+            await markMessagesAsRead(activeConversation.association_id);
+
+            // Update unread count after marking as read
+            setConversations((prev) =>
+              prev.map((conv) =>
+                conv.association_id === activeConversation.association_id
+                  ? { ...conv, unread_count: 0 }
+                  : conv
+              )
+            );
+          }
         } catch (error) {
           console.error("Error fetching messages:", error);
+          // If error occurs because there's no conversation yet, just set empty messages
+          setMessages([]);
         }
       };
 
@@ -167,13 +269,14 @@ export default function DonorChatSection() {
       setMessages((prev) => [...prev, newMsg]);
       setNewMessage("");
 
-      // Update last message in conversation list
+      // Update conversation in the list
       setConversations((prev) =>
         prev.map((conv) =>
           conv.association_id === activeConversation.association_id
             ? {
                 ...conv,
                 last_message: newMsg,
+                has_conversation: true,
               }
             : conv
         )
@@ -185,7 +288,7 @@ export default function DonorChatSection() {
 
   // Helper function to determine if a message is from the user (donor)
   const isUserMessage = (message: Message): boolean => {
-    // Check both sender_type and sender_id to ensure accurate identification
+    // Check sender_type to ensure accurate identification
     return message.sender_type === "user";
   };
 
@@ -205,54 +308,74 @@ export default function DonorChatSection() {
             </div>
           </div>
           <ScrollArea className="h-[calc(450px-57px)]">
-            {filteredConversations.map((conversation) => (
-              <div
-                key={conversation.association_id}
-                className={`flex items-start gap-2 p-2 hover:bg-muted/50 cursor-pointer ${
-                  activeConversation?.association_id ===
-                  conversation.association_id
-                    ? "bg-muted"
-                    : ""
-                }`}
-                onClick={() => {
-                  setActiveConversation(conversation);
-                  if (isMobile) setShowConversations(false);
-                }}
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage
-                    src={conversation.association_avatar || "/placeholder.svg"}
-                    alt={conversation.association_name}
-                  />
-                  <AvatarFallback>
-                    {conversation.association_name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-medium text-xs">
-                      {conversation.association_name}
-                    </h4>
-                    <span className="text-[10px] text-muted-foreground">
-                      {new Date(
-                        conversation.last_message.sent_at
-                      ).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {conversation.last_message.message_content}
-                  </p>
-                </div>
-                {conversation.unread_count > 0 && (
-                  <Badge className="ml-auto h-4 w-4 flex items-center justify-center p-0 text-[10px]">
-                    {conversation.unread_count}
-                  </Badge>
-                )}
+            {loading ? (
+              <div className="flex justify-center items-center h-20">
+                <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
               </div>
-            ))}
+            ) : filteredConversations.length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                No associations found
+              </div>
+            ) : (
+              filteredConversations.map((conversation) => (
+                <div
+                  key={conversation.association_id}
+                  className={`flex items-start gap-2 p-2 hover:bg-muted/50 cursor-pointer ${
+                    activeConversation?.association_id ===
+                    conversation.association_id
+                      ? "bg-muted"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    setActiveConversation(conversation);
+                    if (isMobile) setShowConversations(false);
+                  }}
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage
+                      src={
+                        conversation.association_avatar || "/placeholder.svg"
+                      }
+                      alt={conversation.association_name}
+                    />
+                    <AvatarFallback>
+                      {conversation.association_name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium text-xs">
+                        {conversation.association_name}
+                      </h4>
+                      {conversation.last_message && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(
+                            conversation.last_message.sent_at
+                          ).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    {conversation.last_message ? (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {conversation.last_message.message_content}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        No messages yet
+                      </p>
+                    )}
+                  </div>
+                  {conversation.unread_count > 0 && (
+                    <Badge className="ml-auto h-4 w-4 flex items-center justify-center p-0 text-[10px]">
+                      {conversation.unread_count}
+                    </Badge>
+                  )}
+                </div>
+              ))
+            )}
           </ScrollArea>
         </div>
       )}
@@ -291,57 +414,75 @@ export default function DonorChatSection() {
           </div>
 
           <ScrollArea className="flex-1 p-3">
-            <div className="space-y-4">
-              {messages.map((message) => {
-                const fromUser = isUserMessage(message);
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  No messages yet
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Send a message to start a conversation with{" "}
+                  {activeConversation.association_name}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message) => {
+                  const fromUser = isUserMessage(message);
 
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      fromUser ? "justify-end" : "justify-start"
-                    } gap-2`}
-                  >
-                    {!fromUser && (
-                      <Avatar className="h-6 w-6 mt-auto">
-                        <AvatarImage alt={message.sender_name || ""} />
-                        <AvatarFallback>
-                          {(message.sender_name || "A").charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
+                  return (
                     <div
-                      className={`max-w-[80%] rounded-lg p-2 ${
-                        fromUser
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      }`}
+                      key={message.id}
+                      className={`flex ${
+                        fromUser ? "justify-end" : "justify-start"
+                      } gap-2`}
                     >
                       {!fromUser && (
-                        <p className="text-[10px] font-medium mb-1">
-                          {message.sender_name ||
-                            activeConversation.association_name}
-                        </p>
+                        <Avatar className="h-6 w-6 mt-auto">
+                          <AvatarImage
+                            src={
+                              activeConversation.association_avatar ||
+                              "/placeholder.svg"
+                            }
+                            alt={message.sender_name || ""}
+                          />
+                          <AvatarFallback>
+                            {(message.sender_name || "A").charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
                       )}
-                      <p className="text-xs">{message.message_content}</p>
-                      <span className="text-[10px] opacity-70 block text-right mt-1">
-                        {new Date(message.sent_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
+                      <div
+                        className={`max-w-[80%] rounded-lg p-2 ${
+                          fromUser
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        {!fromUser && (
+                          <p className="text-[10px] font-medium mb-1">
+                            {message.sender_name ||
+                              activeConversation.association_name}
+                          </p>
+                        )}
+                        <p className="text-xs">{message.message_content}</p>
+                        <span className="text-[10px] opacity-70 block text-right mt-1">
+                          {new Date(message.sent_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      {fromUser && (
+                        <Avatar className="h-6 w-6 mt-auto bg-secondary">
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            <User className="h-3 w-3" />
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                     </div>
-                    {fromUser && (
-                      <Avatar className="h-6 w-6 mt-auto bg-secondary">
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          <User className="h-3 w-3" />
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </ScrollArea>
 
           <div className="p-2 border-t">
