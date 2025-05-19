@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/layout/HomePage/Navbar";
 import HeroSection from "@/components/layout/HomePage/HeroSection";
 import HowItWorks from "@/components/layout/HomePage/HowItWorks";
-import CampaignsSection from "@/components/layout/HomePage/CampaignSection";
 import CtaSection from "@/components/layout/HomePage/CTASection";
 import Footer from "@/components/layout/HomePage/Footer";
 
@@ -37,7 +36,6 @@ export default function HomePage() {
       <Navbar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
       <HeroSection />
       <HowItWorks />
-      <CampaignsSection />
       <CtaSection />
       <Footer />
     </div>

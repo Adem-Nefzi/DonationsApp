@@ -10,16 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Bell,
   Moon,
   Sun,
   Users,
   Building,
   Settings,
-  Activity,
   LogOut,
   User,
   Edit,
@@ -47,9 +44,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "../../../hooks/use-toast";
 import UserManagement from "./user-management";
 import AssociationManagement from "./Association-management";
-import SystemSettings from "./System-settings";
-import AdminStats from "./Admin-stats";
-import NotificationsPanel from "./NotificationsPanel";
 import { logout } from "@/api/auth";
 import {
   deleteUserAccount,
@@ -58,8 +52,7 @@ import {
 } from "@/api/crud";
 import { AvatarImage } from "@radix-ui/react-avatar";
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [activeTab, setActiveTab] = useState("users");
   const [theme, setTheme] = useState("light");
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [DeleteDialog, setDeleteDialog] = useState(false);
@@ -251,17 +244,6 @@ export default function AdminDashboard() {
               ) : (
                 <Moon className="h-5 w-5" />
               )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative rounded-full hover:bg-opacity-20 hover:bg-indigo-500 transition-all"
-              onClick={() => setShowNotifications(!showNotifications)}
-            >
-              <Bell className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 animate-pulse">
-                7
-              </Badge>
             </Button>
 
             <DropdownMenu>
@@ -786,37 +768,6 @@ export default function AdminDashboard() {
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Notifications Panel */}
-        {showNotifications && (
-          <Card
-            className={`mb-8 border shadow-lg animate-fade-in ${
-              theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
-            }`}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Notifications</CardTitle>
-                  <CardDescription>
-                    System alerts and activities
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowNotifications(false)}
-                >
-                  Close
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <NotificationsPanel />
-            </CardContent>
-          </Card>
-        )}
-
         {/* Welcome Banner */}
         <div
           className={`mb-8 rounded-xl shadow-lg ${
@@ -843,18 +794,12 @@ export default function AdminDashboard() {
           className="space-y-6"
         >
           <TabsList
-            className={`grid grid-cols-4 w-full max-w-xl mx-auto md:mx-0 shadow-sm ${
+            className={`grid grid-cols-2 w-full max-w-xl mx-auto md:mx-0 shadow-sm ${
               theme === "dark"
                 ? "bg-slate-800 border-slate-700"
                 : "bg-white border"
             }`}
           >
-            <TabsTrigger
-              value="overview"
-              className="transition-all data-[state=active]:shadow-sm"
-            >
-              Overview
-            </TabsTrigger>
             <TabsTrigger
               value="users"
               className="transition-all data-[state=active]:shadow-sm"
@@ -867,146 +812,7 @@ export default function AdminDashboard() {
             >
               Associations
             </TabsTrigger>
-            <TabsTrigger
-              value="settings"
-              className="transition-all data-[state=active]:shadow-sm"
-            >
-              Settings
-            </TabsTrigger>
           </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid gap-6 md:grid-cols-3">
-              <Card
-                className={`group hover:-translate-y-1 transition-all duration-300 ${
-                  theme === "dark"
-                    ? "bg-slate-800 border-slate-700"
-                    : "bg-white"
-                } rounded-xl overflow-hidden shadow-md hover:shadow-lg`}
-              >
-                <div
-                  className={`h-1 w-full group-hover:h-2 transition-all duration-300 ${
-                    theme === "dark"
-                      ? "bg-indigo-600"
-                      : "bg-gradient-to-r from-indigo-500 to-purple-500"
-                  }`}
-                ></div>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Total Users
-                  </CardTitle>
-                  <div
-                    className={`rounded-full p-2 transition-all duration-300 ${
-                      theme === "dark"
-                        ? "bg-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/30"
-                        : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200"
-                    }`}
-                  >
-                    <Users className="h-4 w-4" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">1,248</div>
-                  <p className="text-xs text-muted-foreground">
-                    +86 from last month
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className={`group hover:-translate-y-1 transition-all duration-300 ${
-                  theme === "dark"
-                    ? "bg-slate-800 border-slate-700"
-                    : "bg-white"
-                } rounded-xl overflow-hidden shadow-md hover:shadow-lg`}
-              >
-                <div
-                  className={`h-1 w-full group-hover:h-2 transition-all duration-300 ${
-                    theme === "dark"
-                      ? "bg-purple-600"
-                      : "bg-gradient-to-r from-purple-500 to-pink-500"
-                  }`}
-                ></div>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Active Associations
-                  </CardTitle>
-                  <div
-                    className={`rounded-full p-2 transition-all duration-300 ${
-                      theme === "dark"
-                        ? "bg-purple-500/20 text-purple-400 group-hover:bg-purple-500/30"
-                        : "bg-purple-100 text-purple-600 group-hover:bg-purple-200"
-                    }`}
-                  >
-                    <Building className="h-4 w-4" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">42</div>
-                  <p className="text-xs text-muted-foreground">
-                    +8 from last month
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className={`group hover:-translate-y-1 transition-all duration-300 ${
-                  theme === "dark"
-                    ? "bg-slate-800 border-slate-700"
-                    : "bg-white"
-                } rounded-xl overflow-hidden shadow-md hover:shadow-lg`}
-              >
-                <div
-                  className={`h-1 w-full group-hover:h-2 transition-all duration-300 ${
-                    theme === "dark"
-                      ? "bg-blue-600"
-                      : "bg-gradient-to-r from-blue-500 to-cyan-500"
-                  }`}
-                ></div>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    System Health
-                  </CardTitle>
-                  <div
-                    className={`rounded-full p-2 transition-all duration-300 ${
-                      theme === "dark"
-                        ? "bg-blue-500/20 text-blue-400 group-hover:bg-blue-500/30"
-                        : "bg-blue-100 text-blue-600 group-hover:bg-blue-200"
-                    }`}
-                  >
-                    <Activity className="h-4 w-4" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">98%</div>
-                  <p className="text-xs text-muted-foreground">
-                    All systems operational
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* System Statistics */}
-            <Card
-              className={`group hover:shadow-lg transition-all duration-300 ${
-                theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
-              } rounded-xl`}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-indigo-500" />
-                  System Statistics
-                </CardTitle>
-                <CardDescription>Overview of platform activity</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AdminStats />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
             <Card
@@ -1067,9 +873,6 @@ export default function AdminDashboard() {
                   Configure system-wide settings
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <SystemSettings />
-              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>

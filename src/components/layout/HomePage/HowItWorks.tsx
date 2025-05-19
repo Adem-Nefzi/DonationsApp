@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Search, CreditCard, BarChart4 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface Step {
   icon: React.ElementType;
@@ -215,20 +216,21 @@ export default function HowItWorks() {
           viewport={{ once: true }}
           className="text-center"
         >
-          <Button
-            size="lg"
-            className="rounded-full group px-8 py-4 
-  bg-gradient-to-r from-primary to-accent 
-  hover:from-primary/90 hover:to-accent/90 
-  text-white shadow-lg shadow-primary/40 
-  hover:shadow-xl transition-all duration-300"
-          >
-            Start Your Giving Journey
-            <ArrowRight
-              className="ml-2 h-5 w-5 
+          <Link to="/login">
+            <Button
+              size="lg"
+              className="rounded-full group px-8 py-4
+            bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 
+             text-white shadow-lg shadow-primary/40 
+            hover:shadow-xl transition-all duration-300"
+            >
+              Start Your Giving Journey
+              <ArrowRight
+                className="ml-2 h-5 w-5 
     group-hover:translate-x-1 transition-transform"
-            />
-          </Button>
+              />
+            </Button>
+          </Link>
         </motion.div>
       </div>
     </section>

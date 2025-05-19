@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -9,95 +9,96 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import {
-  MoreHorizontal,
-  Eye,
-  MessageSquare,
-  FileText,
   Building,
 } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-// Mock data for donation history
-const donations = [
-  {
-    id: "1",
-    association: "Helping Hands Foundation",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "Clothes",
-    items: "Winter jackets, gloves, scarves",
-    status: "delivered",
-    date: "2023-12-15",
-  },
-  {
-    id: "2",
-    association: "Food for All",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "Food",
-    items: "Non-perishable food items",
-    status: "in transit",
-    date: "2023-12-10",
-  },
-  {
-    id: "3",
-    association: "Children's Hope Alliance",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "Books",
-    items: "Children's books and educational materials",
-    status: "delivered",
-    date: "2023-12-05",
-  },
-  {
-    id: "4",
-    association: "Medical Relief Initiative",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "Medicine",
-    items: "Over-the-counter medications",
-    status: "delivered",
-    date: "2023-11-20",
-  },
-  {
-    id: "5",
-    association: "Green Earth Project",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "Other",
-    items: "Gardening tools and seeds",
-    status: "processing",
-    date: "2023-11-15",
-  },
-];
+import { getDonorOffers } from "@/api/donation";
+import { Offer } from "@/api/donation";
+import { format } from "date-fns";
 
 export default function DonationHistory() {
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const isMobile = useMobile();
 
-  const filteredDonations = donations.filter((donation) => {
+  useEffect(() => {
+    const fetchDonorOffers = async () => {
+      try {
+        setLoading(true);
+        const data = await getDonorOffers();
+        setOffers(data);
+      } catch (err) {
+        setError("Failed to fetch donation history");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDonorOffers();
+  }, []);
+
+  const filteredOffers = offers.filter((offer) => {
     if (filter === "all") return true;
-    return donation.status === filter;
+    return offer.status === filter;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "delivered":
+      case "approved":
         return "bg-green-500";
-      case "in transit":
+      case "pending":
         return "bg-yellow-500";
-      case "processing":
-        return "bg-blue-500";
+      case "rejected":
+        return "bg-red-500";
       default:
         return "bg-gray-500";
     }
   };
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case "approved":
+        return "Approved";
+      case "pending":
+        return "Pending";
+      case "rejected":
+        return "Rejected";
+      default:
+        return status;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p>Loading donation history...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
+  if (offers.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p>No donation history found</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -110,25 +111,25 @@ export default function DonationHistory() {
           All
         </Button>
         <Button
-          variant={filter === "delivered" ? "default" : "outline"}
+          variant={filter === "approved" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilter("delivered")}
+          onClick={() => setFilter("approved")}
         >
-          Delivered
+          Approved
         </Button>
         <Button
-          variant={filter === "in transit" ? "default" : "outline"}
+          variant={filter === "pending" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilter("in transit")}
+          onClick={() => setFilter("pending")}
         >
-          In Transit
+          Pending
         </Button>
         <Button
-          variant={filter === "processing" ? "default" : "outline"}
+          variant={filter === "rejected" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilter("processing")}
+          onClick={() => setFilter("rejected")}
         >
-          Processing
+          Rejected
         </Button>
       </div>
 
@@ -137,76 +138,58 @@ export default function DonationHistory() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[180px]">Association</TableHead>
-              {!isMobile && <TableHead>Type</TableHead>}
-              {!isMobile && <TableHead>Items</TableHead>}
+              {!isMobile && <TableHead>Title</TableHead>}
+              {!isMobile && <TableHead>Description</TableHead>}
               <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredDonations.map((donation) => (
-              <TableRow key={donation.id}>
+            {filteredOffers.map((offer) => (
+              <TableRow key={offer.id}>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                       <AvatarImage
-                        src={donation.associationAvatar || "/placeholder.svg"}
-                        alt={donation.association}
+                        src={
+                          typeof offer.association?.logo === "string"
+                            ? offer.association.logo
+                            : "/placeholder.svg"
+                        }
+                        alt={offer.association?.name || "Association"}
                       />
                       <AvatarFallback>
                         <Building className="h-3 w-3" />
                       </AvatarFallback>
                     </Avatar>
                     <span className="font-medium text-xs">
-                      {donation.association}
+                      {offer.association?.name || "Association not found"}
                     </span>
                   </div>
                 </TableCell>
                 {!isMobile && (
-                  <TableCell className="text-xs">{donation.type}</TableCell>
+                  <TableCell className="text-xs">{offer.title}</TableCell>
                 )}
                 {!isMobile && (
-                  <TableCell className="text-xs">{donation.items}</TableCell>
+                  <TableCell className="text-xs">
+                    {offer.description || "No description"}
+                  </TableCell>
                 )}
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <div
                       className={`h-2 w-2 rounded-full ${getStatusColor(
-                        donation.status
+                        offer.status
                       )}`}
                     />
                     <span className="capitalize text-xs">
-                      {donation.status}
+                      {getStatusDisplay(offer.status)}
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="text-xs">{donation.date}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <MoreHorizontal className="h-3 w-3" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel className="text-xs">
-                        Actions
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-xs">
-                        <Eye className="mr-2 h-3 w-3" /> View details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs">
-                        <MessageSquare className="mr-2 h-3 w-3" /> Message
-                        association
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs">
-                        <FileText className="mr-2 h-3 w-3" /> View receipt
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TableCell className="text-xs">
+                  {format(new Date(offer.created_at), "MMM dd, yyyy")}
                 </TableCell>
               </TableRow>
             ))}

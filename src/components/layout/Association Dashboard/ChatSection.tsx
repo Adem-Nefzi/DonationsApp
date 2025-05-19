@@ -8,7 +8,6 @@ import { Send, User, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMobile } from "@/hooks/use-mobile";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import _ from "lodash";
 import {
   getAssociationMessages,
@@ -23,13 +22,10 @@ interface ConversationSummary {
   user_name: string;
   last_message: Message;
   unread_count: number;
-  user_type: "donor" | "recipient";
+  user_type: "donor";
 }
 
 export default function ChatSection() {
-  const [activeTab, setActiveTab] = useState<"applicants" | "donors">(
-    "applicants"
-  );
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [filteredConversations, setFilteredConversations] = useState<
     ConversationSummary[]
@@ -52,8 +48,8 @@ export default function ChatSection() {
           (msg: Message) => msg.sender?.id || msg.sender_id
         );
 
-        const convs: ConversationSummary[] = Object.entries(grouped).map(
-          ([userIdStr, messages]) => {
+        const convs: ConversationSummary[] = Object.entries(grouped)
+          .map(([userIdStr, messages]) => {
             const sorted = messages.sort(
               (a, b) =>
                 new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
@@ -68,10 +64,10 @@ export default function ChatSection() {
                 : "Unknown",
               last_message: latest,
               unread_count: unreadCount,
-              user_type: latest.sender?.user_type || "recipient",
+              user_type: "donor" as const,
             };
-          }
-        );
+          })
+          .filter((conv) => conv.user_type === "donor"); // Only keep donor conversations
 
         setConversations(convs);
         setFilteredConversations(convs);
@@ -92,22 +88,19 @@ export default function ChatSection() {
         try {
           const data = await getConversation(activeConversation.user_id);
 
-          // Process messages to ensure correct sender/receiver identification
           const processedMessages: Message[] = data.messages.map((message) => {
-            // If the message doesn't have a sender_type or receiver_type, determine them
             if (!message.sender_type || !message.receiver_type) {
-              // If the sender is not the user, it must be from the association
               if (message.sender_id !== activeConversation.user_id) {
                 return {
                   ...message,
-                  sender_type: "association" as "association" | "user",
-                  receiver_type: "user" as "association" | "user",
+                  sender_type: "association",
+                  receiver_type: "user",
                 };
               } else {
                 return {
                   ...message,
-                  sender_type: "user" as "association" | "user",
-                  receiver_type: "association" as "association" | "user",
+                  sender_type: "user",
+                  receiver_type: "association",
                 };
               }
             }
@@ -117,7 +110,6 @@ export default function ChatSection() {
           setMessages(processedMessages);
           await markMessagesAsRead(activeConversation.user_id);
 
-          // Update unread count after marking as read
           setConversations((prev) =>
             prev.map((conv) =>
               conv.user_id === activeConversation.user_id
@@ -135,14 +127,11 @@ export default function ChatSection() {
   }, [activeConversation]);
 
   useEffect(() => {
-    const filtered = conversations.filter(
-      (conv) =>
-        conv.user_type ===
-          (activeTab === "applicants" ? "recipient" : "donor") &&
-        conv.user_name.toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = conversations.filter((conv) =>
+      conv.user_name.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredConversations(filtered);
-  }, [searchQuery, activeTab, conversations]);
+  }, [searchQuery, conversations]);
 
   const handleSendMessage = async () => {
     if (newMessage.trim() === "" || !activeConversation) return;
@@ -152,17 +141,15 @@ export default function ChatSection() {
         newMessage
       );
 
-      // Ensure the message has the correct sender_type and receiver_type
       const messageWithCorrectTypes: Message = {
         ...sentMessage,
-        sender_type: "association", // Explicitly set sender type
-        receiver_type: "user", // Explicitly set receiver type
+        sender_type: "association",
+        receiver_type: "user",
       };
 
       setMessages((prev) => [...prev, messageWithCorrectTypes]);
       setNewMessage("");
 
-      // Update last message in conversation list
       setConversations((prev) =>
         prev.map((conv) =>
           conv.user_id === activeConversation.user_id
@@ -182,11 +169,7 @@ export default function ChatSection() {
     }
   };
 
-  // Helper function to determine if a message is from the association
   const isAssociationMessage = (message: Message): boolean => {
-    // Check both sender_type and sender_id to ensure accurate identification
-    // If the message was sent by the association, sender_type will be "association"
-    // If the message was received by the association, receiver_type will be "association" and sender_type will be "user"
     return (
       message.sender_type === "association" ||
       (message.receiver_id === activeConversation?.user_id &&
@@ -199,26 +182,10 @@ export default function ChatSection() {
       {showConversations && (
         <div className="w-full md:w-1/3 border-r">
           <div className="p-2 border-b">
-            <Tabs
-              defaultValue="applicants"
-              value={activeTab}
-              onValueChange={(val) =>
-                setActiveTab(val as "applicants" | "donors")
-              }
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="applicants" className="text-xs">
-                  Applicants
-                </TabsTrigger>
-                <TabsTrigger value="donors" className="text-xs">
-                  Donors
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
             <div className="relative mt-2">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search..."
+                placeholder="Search donors..."
                 className="pl-8 h-8 text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -303,11 +270,7 @@ export default function ChatSection() {
               <h4 className="font-medium text-xs">
                 {activeConversation?.user_name}
               </h4>
-              <p className="text-[10px] text-muted-foreground">
-                {activeConversation?.user_type === "recipient"
-                  ? "Applicant"
-                  : "Donor"}
-              </p>
+              <p className="text-[10px] text-muted-foreground">Donor</p>
             </div>
           </div>
         </div>
@@ -315,7 +278,6 @@ export default function ChatSection() {
         <ScrollArea className="flex-1 p-3">
           <div className="space-y-4">
             {messages.map((message) => {
-              // Determine if this message is from the association
               const fromAssociation = isAssociationMessage(message);
 
               return (
@@ -343,11 +305,6 @@ export default function ChatSection() {
                         : "bg-muted"
                     }`}
                   >
-                    {!fromAssociation && (
-                      <p className="text-[10px] font-medium mb-1">
-                        {activeConversation?.user_name}
-                      </p>
-                    )}
                     <p className="text-xs">{message.message_content}</p>
                     <span className="text-[10px] opacity-70 block text-right mt-1">
                       {new Date(message.sent_at).toLocaleTimeString([], {

@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Check,
   AlertCircle,
@@ -115,37 +114,6 @@ export default function LoginForm({
               </FormItem>
             )}
           />
-
-          {/* Remember Me & Forgot Password */}
-          <div className="flex items-center justify-between">
-            <FormField
-              control={form.control}
-              name="rememberMe"
-              render={({ field }) => (
-                <FormItem className="flex items-center space-x-2 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      id="remember-me"
-                    />
-                  </FormControl>
-                  <FormLabel
-                    htmlFor="remember-me"
-                    className="text-sm font-normal"
-                  >
-                    Remember me
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
-            <a
-              href="/forgot-password"
-              className="text-sm text-primary hover:underline"
-            >
-              Forgot password?
-            </a>
-          </div>
 
           {/* Submit Button */}
           <Button type="submit" className="w-full" disabled={loading}>

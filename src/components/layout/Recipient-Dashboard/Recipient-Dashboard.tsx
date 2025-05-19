@@ -10,15 +10,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Bell,
-  MessageSquare,
   Moon,
   Sun,
   HandHelping,
-  Clock,
   Users,
   LogOut,
   Edit,
@@ -46,8 +42,6 @@ import {
 import { useToast } from "../../../hooks/use-toast";
 import AssociationsList from "./Associations-list";
 import RequestHistory from "./Request-history";
-import ChatSection from "./Chat-Section";
-import NotificationsPanel from "./Notifications-Panel";
 import { logout } from "@/api/auth";
 import { Input } from "@/components/ui/input";
 import {
@@ -260,17 +254,6 @@ export default function RecipientDashboard() {
               ) : (
                 <Moon className="h-5 w-5" />
               )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative rounded-full hover:bg-opacity-20 hover:bg-indigo-500 transition-all"
-              onClick={() => setShowNotifications(!showNotifications)}
-            >
-              <Bell className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 animate-pulse">
-                4
-              </Badge>
             </Button>
 
             {/* Avatar Dropdown */}
@@ -818,9 +801,6 @@ export default function RecipientDashboard() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <NotificationsPanel />
-            </CardContent>
           </Card>
         )}
 
@@ -831,7 +811,7 @@ export default function RecipientDashboard() {
           className="space-y-6"
         >
           <TabsList
-            className={`grid grid-cols-4 w-full max-w-md mx-auto md:mx-0 shadow-sm ${
+            className={`grid grid-cols-3 w-full max-w-md mx-auto md:mx-0 shadow-sm ${
               theme === "dark"
                 ? "bg-slate-800 border-slate-700"
                 : "bg-white border"
@@ -855,126 +835,11 @@ export default function RecipientDashboard() {
             >
               My Requests
             </TabsTrigger>
-            <TabsTrigger
-              value="messages"
-              className="transition-all data-[state=active]:shadow-sm"
-            >
-              Messages
-            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Card
-                className={`group hover:-translate-y-1 transition-all duration-300 ${
-                  theme === "dark"
-                    ? "bg-slate-800 border-slate-700"
-                    : "bg-white"
-                } rounded-xl overflow-hidden shadow-md hover:shadow-lg`}
-              >
-                <div
-                  className={`h-1 w-full group-hover:h-2 transition-all duration-300 ${
-                    theme === "dark"
-                      ? "bg-indigo-600"
-                      : "bg-gradient-to-r from-indigo-500 to-purple-500"
-                  }`}
-                ></div>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Active Requests
-                  </CardTitle>
-                  <div
-                    className={`rounded-full p-2 transition-all duration-300 ${
-                      theme === "dark"
-                        ? "bg-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/30"
-                        : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200"
-                    }`}
-                  >
-                    <HandHelping className="h-4 w-4" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">3</div>
-                  <p className="text-xs text-muted-foreground">
-                    2 pending approval
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className={`group hover:-translate-y-1 transition-all duration-300 ${
-                  theme === "dark"
-                    ? "bg-slate-800 border-slate-700"
-                    : "bg-white"
-                } rounded-xl overflow-hidden shadow-md hover:shadow-lg`}
-              >
-                <div
-                  className={`h-1 w-full group-hover:h-2 transition-all duration-300 ${
-                    theme === "dark"
-                      ? "bg-purple-600"
-                      : "bg-gradient-to-r from-purple-500 to-pink-500"
-                  }`}
-                ></div>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Approved Requests
-                  </CardTitle>
-                  <div
-                    className={`rounded-full p-2 transition-all duration-300 ${
-                      theme === "dark"
-                        ? "bg-purple-500/20 text-purple-400 group-hover:bg-purple-500/30"
-                        : "bg-purple-100 text-purple-600 group-hover:bg-purple-200"
-                    }`}
-                  >
-                    <Clock className="h-4 w-4" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">5</div>
-                  <p className="text-xs text-muted-foreground">
-                    2 ready for pickup
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card
-                className={`group hover:-translate-y-1 transition-all duration-300 ${
-                  theme === "dark"
-                    ? "bg-slate-800 border-slate-700"
-                    : "bg-white"
-                } rounded-xl overflow-hidden shadow-md hover:shadow-lg`}
-              >
-                <div
-                  className={`h-1 w-full group-hover:h-2 transition-all duration-300 ${
-                    theme === "dark"
-                      ? "bg-blue-600"
-                      : "bg-gradient-to-r from-blue-500 to-cyan-500"
-                  }`}
-                ></div>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Unread Messages
-                  </CardTitle>
-                  <div
-                    className={`rounded-full p-2 transition-all duration-300 ${
-                      theme === "dark"
-                        ? "bg-blue-500/20 text-blue-400 group-hover:bg-blue-500/30"
-                        : "bg-blue-100 text-blue-600 group-hover:bg-blue-200"
-                    }`}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">4</div>
-                  <p className="text-xs text-muted-foreground">
-                    From 2 associations
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
 
             {/* Recent Requests */}
             <Card
@@ -1053,26 +918,6 @@ export default function RecipientDashboard() {
               </CardHeader>
               <CardContent>
                 <RequestHistory />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Messages Tab */}
-          <TabsContent value="messages" className="space-y-6">
-            <Card
-              className={`group hover:shadow-lg transition-all duration-300 ${
-                theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
-              } rounded-xl`}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-blue-500" />
-                  Messages
-                </CardTitle>
-                <CardDescription>Chat with associations</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChatSection />
               </CardContent>
             </Card>
           </TabsContent>

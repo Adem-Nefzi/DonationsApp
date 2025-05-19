@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { HandHeart } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function CtaSection() {
   return (
@@ -24,9 +25,11 @@ export default function CtaSection() {
             communities around the world.
           </p>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button size="lg" variant="secondary" className="gap-2">
-              <HandHeart className="h-5 w-5" /> Start Your Journey
-            </Button>
+            <Link to="/login">
+              <Button size="lg" variant="secondary" className="gap-2">
+                <HandHeart className="h-5 w-5" /> Start Your Journey
+              </Button>
+            </Link>
           </motion.div>
         </motion.div>
       </div>

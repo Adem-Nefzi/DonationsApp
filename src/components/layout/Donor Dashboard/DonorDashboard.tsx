@@ -10,10 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Bell,
   Heart,
   MessageSquare,
   Moon,
@@ -48,13 +46,11 @@ import { useToast } from "../../../hooks/use-toast";
 import AssociationsList from "./AssociationList";
 import DonationHistory from "./DonationHistory";
 import ChatSection from "./ChatSection";
-import NotificationsPanel from "./NotificationsPanel";
 import { logout } from "@/api/auth";
 import { deleteUserAccount, updateUserProfile } from "@/api/crud";
 import { getUserProfile } from "@/api/crud";
 export default function DonorDashboard() {
   const [activeTab, setActiveTab] = useState("discover");
-  const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [DeleteDialog, setDeleteDialog] = useState(false);
@@ -241,18 +237,6 @@ export default function DonorDashboard() {
                 <Moon className="h-5 w-5" />
               )}
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative rounded-full hover:bg-opacity-20 hover:bg-indigo-500 transition-all"
-              onClick={() => setShowNotifications(!showNotifications)}
-            >
-              <Bell className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 animate-pulse">
-                3
-              </Badge>
-            </Button>
-
             {/* Avatar Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -779,34 +763,6 @@ export default function DonorDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Notifications Panel */}
-        {showNotifications && (
-          <Card
-            className={`mb-8 border shadow-lg animate-fade-in ${
-              theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white"
-            }`}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Notifications</CardTitle>
-                  <CardDescription>Your recent activity</CardDescription>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowNotifications(false)}
-                >
-                  Close
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <NotificationsPanel />
-            </CardContent>
-          </Card>
-        )}
-
         {/* Welcome Banner */}
         <div
           className={`mb-8 rounded-xl shadow-lg ${
@@ -818,7 +774,7 @@ export default function DonorDashboard() {
           <div className="relative z-10">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
               Welcome back,{" "}
-              <span className="text-primary">
+              <span className="text-blue-300">
                 {currentProfile.firstName || "User"}
               </span>
             </h1>

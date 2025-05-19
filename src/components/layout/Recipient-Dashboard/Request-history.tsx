@@ -1,89 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  MoreHorizontal,
-  MessageSquare,
-  Eye,
-  Building,
-  Clock,
-  X,
-} from "lucide-react";
-
-// Mock data for requests
-const requestsData = [
-  {
-    id: "1",
-    association: "Helping Hands Foundation",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "Clothes",
-    details: "Winter clothes for my family (2 adults, 3 children)",
-    status: "approved",
-    date: "2023-12-15",
-    pickupDate: "2023-12-20",
-    pickupLocation: "123 Main St, New York, NY 10001",
-  },
-  {
-    id: "2",
-    association: "Food for All",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "Food",
-    details: "Non-perishable food items for a family of 5",
-    status: "pending",
-    date: "2023-12-14",
-  },
-  {
-    id: "3",
-    association: "Children's Hope Alliance",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "School Supplies",
-    details: "School supplies for 3 children (ages 7, 9, and 12)",
-    status: "approved",
-    date: "2023-12-10",
-    pickupDate: "2023-12-18",
-    pickupLocation: "456 Park Ave, Chicago, IL 60601",
-  },
-  {
-    id: "4",
-    association: "Medical Relief Initiative",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "Medicine",
-    details: "Over-the-counter medications for cold and flu",
-    status: "rejected",
-    date: "2023-12-05",
-    rejectionReason:
-      "We currently don't have these items in stock. Please check back next week.",
-  },
-  {
-    id: "5",
-    association: "Food for All",
-    associationAvatar: "/placeholder.svg?height=40&width=40",
-    type: "Food",
-    details: "Emergency food assistance",
-    status: "pending",
-    date: "2023-12-12",
-  },
-];
+import { Building, Clock } from "lucide-react";
+import { getRecipientRequests } from "@/api/donation";
+import { RecipientRequest } from "@/api/donation";
+import { format } from "date-fns";
 
 type RequestHistoryProps = {
   limit?: number;
 };
 
 export default function RequestHistory({ limit }: RequestHistoryProps) {
-  const [filter, setFilter] = useState("all");
-  const [requests, setRequests] = useState(requestsData);
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
+  const [requests, setRequests] = useState<RecipientRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        setLoading(true);
+        const data = await getRecipientRequests();
+        setRequests(data);
+      } catch (err) {
+        setError("Failed to fetch requests");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequests();
+  }, []);
 
   const filteredRequests = requests
     .filter((request) => {
@@ -92,23 +46,12 @@ export default function RequestHistory({ limit }: RequestHistoryProps) {
     })
     .slice(0, limit || requests.length);
 
-  const handleCancelRequest = (id: string) => {
-    // In a real app, you would send a request to the backend
-    setRequests(
-      requests.map((req) =>
-        req.id === id ? { ...req, status: "cancelled" } : req
-      )
-    );
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved":
         return "bg-green-500";
       case "rejected":
         return "bg-red-500";
-      case "cancelled":
-        return "bg-gray-500";
       default:
         return "bg-yellow-500"; // pending
     }
@@ -120,12 +63,42 @@ export default function RequestHistory({ limit }: RequestHistoryProps) {
         return "default";
       case "rejected":
         return "destructive";
-      case "cancelled":
-        return "outline";
       default:
         return "secondary"; // pending
     }
   };
+
+  const getAssociationName = (request: RecipientRequest) => {
+    return request.association?.name || "Association";
+  };
+
+  const getAssociationLogo = (request: RecipientRequest) => {
+    return request.association?.logo || "/placeholder.svg";
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        Loading requests...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64 text-red-500">
+        {error}
+      </div>
+    );
+  }
+
+  if (requests.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        No requests found
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -170,8 +143,8 @@ export default function RequestHistory({ limit }: RequestHistoryProps) {
                 <div className="flex items-start gap-2">
                   <Avatar className="h-8 w-8 border-2 border-background">
                     <AvatarImage
-                      src={request.associationAvatar || "/placeholder.svg"}
-                      alt={request.association}
+                      src={getAssociationLogo(request)}
+                      alt={getAssociationName(request)}
                     />
                     <AvatarFallback>
                       <Building className="h-4 w-4" />
@@ -180,7 +153,7 @@ export default function RequestHistory({ limit }: RequestHistoryProps) {
                   <div>
                     <div className="flex items-center gap-2">
                       <h4 className="font-semibold text-sm">
-                        {request.association}
+                        {getAssociationName(request)}
                       </h4>
                       <div
                         className={`h-2 w-2 rounded-full ${getStatusColor(
@@ -189,33 +162,30 @@ export default function RequestHistory({ limit }: RequestHistoryProps) {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Type: {request.type}
+                      Title: {request.title}
                     </p>
-                    <p className="text-xs mt-1">{request.details}</p>
+                    <p className="text-xs mt-1">
+                      {request.description || "No description"}
+                    </p>
 
                     {request.status === "approved" && (
                       <div className="mt-2 p-2 bg-muted rounded-md text-xs">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span>Pickup: {request.pickupDate}</span>
-                        </div>
-                        <div className="flex items-start gap-1 mt-1">
-                          <Building className="h-3 w-3 text-muted-foreground mt-0.5" />
-                          <span>{request.pickupLocation}</span>
+                          <span>
+                            Created:{" "}
+                            {format(
+                              new Date(request.created_at),
+                              "MMM dd, yyyy"
+                            )}
+                          </span>
                         </div>
                       </div>
                     )}
 
-                    {request.status === "rejected" &&
-                      request.rejectionReason && (
-                        <div className="mt-2 p-2 bg-destructive/10 rounded-md text-xs">
-                          <p>Reason: {request.rejectionReason}</p>
-                        </div>
-                      )}
-
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="outline" className="text-[10px]">
-                        {request.date}
+                        {format(new Date(request.created_at), "MMM dd, yyyy")}
                       </Badge>
                       <Badge
                         variant={getStatusBadge(request.status)}
@@ -225,37 +195,6 @@ export default function RequestHistory({ limit }: RequestHistoryProps) {
                       </Badge>
                     </div>
                   </div>
-                </div>
-                <div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <MoreHorizontal className="h-3 w-3" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel className="text-xs">
-                        Actions
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-xs">
-                        <Eye className="mr-2 h-3 w-3" /> View details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs">
-                        <MessageSquare className="mr-2 h-3 w-3" /> Message
-                        association
-                      </DropdownMenuItem>
-                      {request.status === "pending" && (
-                        <DropdownMenuItem
-                          className="text-xs text-destructive"
-                          onClick={() => handleCancelRequest(request.id)}
-                        >
-                          <X className="mr-2 h-3 w-3" /> Cancel request
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
               </div>
             </CardContent>

@@ -7,6 +7,8 @@ import AssociationPage from "./components/AssociationDashboard";
 import DashboardPage from "./components/DonorDashboard";
 import AdminDashboard from "./components/layout/Admin Dashboard/Admin-Dashboard";
 import { Toaster } from "@/components/ui/toaster";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RoleProtectedRoute } from "@/components/RoleProtectedRoute";
 
 const router = createBrowserRouter([
   {
@@ -22,20 +24,40 @@ const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    path: "/donor-dashboard",
-    element: <DashboardPage />,
-  },
-  {
-    path: "/association-dashboard",
-    element: <AssociationPage />,
-  },
-  {
-    path: "/recipient-dashboard",
-    element: <RecipientPage />,
-  },
-  {
-    path: "/admin-dashboard",
-    element: <AdminDashboard />,
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <RoleProtectedRoute allowedRoles={["donor"]} />,
+        children: [
+          {
+            path: "/donor-dashboard",
+            element: <DashboardPage />,
+          },
+        ],
+      },
+          {
+            path: "/association-dashboard",
+            element: <AssociationPage />,
+          },
+      {
+        element: <RoleProtectedRoute allowedRoles={["recipient"]} />,
+        children: [
+          {
+            path: "/recipient-dashboard",
+            element: <RecipientPage />,
+          },
+        ],
+      },
+      {
+        element: <RoleProtectedRoute allowedRoles={["admin"]} />,
+        children: [
+          {
+            path: "/admin-dashboard",
+            element: <AdminDashboard />,
+          },
+        ],
+      },
+    ],
   },
 ]);
 
@@ -43,7 +65,7 @@ export default function App() {
   return (
     <>
       <RouterProvider router={router} />
-      <Toaster /> {/* ✅ Toast notifications will now work globally */}
+      <Toaster />
     </>
   );
 }

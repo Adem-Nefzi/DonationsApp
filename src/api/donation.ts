@@ -25,12 +25,18 @@ export interface Offer {
   created_at: string;
   updated_at: string;
   user?: {
-    // This might be missing
     id: number;
     first_name: string;
     last_name: string;
     email: string;
     avatar?: string;
+  };
+  association?: {
+    // Add this
+    id: number;
+    name: string;
+    logo?: File;
+    // Add other association fields you might have
   };
 }
 
@@ -56,6 +62,13 @@ export const updateOfferStatus = async (
     { withCredentials: true }
   );
   return response.data;
+};
+
+export const getDonorOffers = async (): Promise<Offer[]> => {
+  const response = await api.get("/donor/offers", {
+    withCredentials: true,
+  });
+  return response.data.offers;
 };
 
 //Recipient Handling
@@ -90,6 +103,11 @@ export interface RecipientRequest {
     email: string;
     avatar?: string;
   };
+  association?: {
+    id: number;
+    name: string;
+    logo?: string;
+  };
 }
 
 // Get requests for an association (matches backend getAssociationOffers)
@@ -116,4 +134,12 @@ export const updateRequestStatus = async (
     { withCredentials: true }
   );
   return response.data;
+};
+
+// Get all requests made by the current recipient user
+export const getRecipientRequests = async (): Promise<RecipientRequest[]> => {
+  const response = await api.get("/recipient/requests", {
+    withCredentials: true,
+  });
+  return response.data.requests;
 };
